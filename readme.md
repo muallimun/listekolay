@@ -79,5 +79,11 @@ Hazır Windows çalıştırılabilir sürüm için [Releases](https://github.com
 
 ## 📄 License / Lisans
 
-MIT License (you may freely use, modify, and distribute the software)
-MIT Lisansı (yazılımı serbestçe kullanabilir, düzenleyebilir ve dağıtabilirsiniz)
+This project is licensed under the **Creative Commons BY-NC 4.0** license.  
+You may use, modify, and share the software **for personal and educational purposes only**.  
+**Commercial use is not permitted.**
+
+Bu proje **Creative Commons BY-NC 4.0** lisansı altındadır.  
+Yazılımı yalnızca **kişisel ve eğitim amaçlı** kullanabilir, düzenleyebilir ve paylaşabilirsiniz.  
+**Ticari kullanım yasaktır.**
+
