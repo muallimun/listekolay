@@ -1,0 +1,6 @@
+requests
+pillow
+openpyxl
+python-docx
+pdf2image
+PyMuPDF
