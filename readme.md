@@ -1,6 +1,6 @@
-# ListeKolay
+# ListeKolay - EasyLister
 
-**ListeKolay** is a multilingual desktop utility that helps you generate organized and filtered file lists from any folder on your computer. It offers a user-friendly and modern interface with powerful filtering and preview features.
+**ListeKolay** / ** EasyLister** is a multilingual desktop utility that helps you generate organized and filtered file lists from any folder on your computer. It offers a user-friendly and modern interface with powerful filtering and preview features.
 
 **ListeKolay**, bilgisayarınızdaki klasörlerdeki tüm dosyaları hızlı ve filtrelenebilir şekilde listelemenizi sağlayan çok dilli bir masaüstü uygulamasıdır. Modern, sade ve kullanıcı dostu arayüzü sayesinde dosya uzantılarına göre filtreleme, istatistik görüntüleme, farklı formatlarda dışa aktarma (TXT, Excel, Word, HTML) ve görsel önizleme gibi özellikleri destekler.
 
@@ -80,10 +80,10 @@ Hazır Windows çalıştırılabilir sürüm için [Releases](https://github.com
 ## 📄 License / Lisans
 
 This project is licensed under the **Creative Commons BY-NC 4.0** license.  
-You may use, modify, and share the software **for personal and educational purposes only**.  
+You may use and share the software **for personal and educational purposes only**.  
 **Commercial use is not permitted.**
 
 Bu proje **Creative Commons BY-NC 4.0** lisansı altındadır.  
-Yazılımı yalnızca **kişisel ve eğitim amaçlı** kullanabilir, düzenleyebilir ve paylaşabilirsiniz.  
+Yazılımı yalnızca **kişisel ve eğitim amaçlı** kullanabilir ve paylaşabilirsiniz.  
 **Ticari kullanım yasaktır.**
 
