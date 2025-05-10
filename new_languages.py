@@ -2,8 +2,25 @@
 New language dictionaries to be added to ListeKolay application.
 """
 
+# Turkish language dictionary
+tr_dict = {
+    "theme_settings": "Tema:",
+    "light_mode": "Açık mod",
+    "dark_mode": "Koyu mod"
+}
+
+# Arabic language dictionary
+ar_dict = {
+    "theme_settings": "السمة:",
+    "light_mode": "الوضع الفاتح",
+    "dark_mode": "الوضع الداكن"
+}
+
 # German language dictionary
 de_dict = {
+    "theme_settings": "Theme:",
+    "light_mode": "Lichtmodus",
+    "dark_mode": "Dunkelmodus",
     "open_file": "Datei öffnen",
     "open_file_location": "Dateipfad öffnen",
     "select_folder": "📁 Ordner auswählen",
@@ -31,6 +48,8 @@ de_dict = {
     "files_loading": "Dateien werden geladen...",
     "filter_applying": "Filter wird angewendet...",
     "filter_cancelled": "Filtervorgang abgebrochen",
+    "filtering_in_progress": "Filterung läuft",
+    "filter_complete": "Filterung abgeschlossen",
     "excel_created": "Excel-Datei erfolgreich erstellt...",
     "error_occurred": "Ein Fehler ist aufgetreten: {0}",
     "error": "Fehler",
@@ -141,6 +160,9 @@ de_dict = {
 
 # French language dictionary
 fr_dict = {
+    "theme_settings": "Thème:",
+    "light_mode": "Mode clair",
+    "dark_mode": "Mode sombre",
     "open_file": "Ouvrir fichier",
     "open_file_location": "Ouvrir l'emplacement",
     "select_folder": "📁 Sélectionner dossier",
@@ -168,6 +190,8 @@ fr_dict = {
     "files_loading": "Chargement des fichiers...",
     "filter_applying": "Application du filtre...",
     "filter_cancelled": "Opération de filtrage annulée",
+    "filtering_in_progress": "Filtrage en cours",
+    "filter_complete": "Filtrage terminé",
     "excel_created": "Fichier Excel créé avec succès...",
     "error_occurred": "Une erreur s'est produite: {0}",
     "error": "Erreur",
@@ -291,6 +315,9 @@ fr_dict = {
 
 # Russian language dictionary
 ru_dict = {
+    "theme_settings": "Тема:",
+    "light_mode": "Светлая тема",
+    "dark_mode": "Тёмная тема",
     "open_file": "Открыть файл",
     "open_file_location": "Открыть расположение файла",
     "select_folder": "📁 Выбрать папку",
@@ -318,6 +345,8 @@ ru_dict = {
     "files_loading": "Загрузка файлов...",
     "filter_applying": "Применение фильтра...",
     "filter_cancelled": "Операция фильтрации отменена",
+    "filtering_in_progress": "Фильтрация выполняется",
+    "filter_complete": "Фильтрация завершена",
     "excel_created": "Файл Excel успешно создан...",
     "error_occurred": "Произошла ошибка: {0}",
     "error": "Ошибка",
@@ -441,6 +470,9 @@ ru_dict = {
 
 # Spanish language dictionary
 es_dict = {
+    "theme_settings": "Tema:",
+    "light_mode": "Modo claro",
+    "dark_mode": "Modo oscuro",
     "open_file": "Abrir archivo",
     "open_file_location": "Abrir ubicación del archivo",
     "select_folder": "📁 Seleccionar carpeta",
@@ -468,6 +500,8 @@ es_dict = {
     "files_loading": "Cargando archivos...",
     "filter_applying": "Aplicando filtro...",
     "filter_cancelled": "Operación de filtrado cancelada",
+    "filtering_in_progress": "Filtrado en curso",
+    "filter_complete": "Filtrado completado",
     "excel_created": "Archivo Excel creado con éxito...",
     "error_occurred": "Se ha producido un error: {0}",
     "error": "Error",
@@ -591,6 +625,9 @@ es_dict = {
 
 # Italian language dictionary
 it_dict = {
+    "theme_settings": "Tema:",
+    "light_mode": "Modalità chiara",
+    "dark_mode": "Modalità scura",
     "open_file": "Apri file",
     "open_file_location": "Apri posizione file",
     "select_folder": "📁 Seleziona cartella",
@@ -618,6 +655,8 @@ it_dict = {
     "files_loading": "Caricamento file...",
     "filter_applying": "Applicazione filtro...",
     "filter_cancelled": "Operazione di filtraggio annullata",
+    "filtering_in_progress": "Filtraggio in corso",
+    "filter_complete": "Filtraggio completato",
     "excel_created": "File Excel creato con successo...",
     "error_occurred": "Si è verificato un errore: {0}",
     "error": "Errore",
@@ -741,6 +780,9 @@ it_dict = {
 
 # Persian language dictionary
 fa_dict = {
+    "theme_settings": "تم:",
+    "light_mode": "حالت روشن",
+    "dark_mode": "حالت تاریک",
     "open_file": "باز کردن فایل",
     "open_file_location": "باز کردن محل فایل",
     "select_folder": "📁 انتخاب پوشه",
@@ -768,6 +810,8 @@ fa_dict = {
     "files_loading": "در حال بارگذاری فایل‌ها...",
     "filter_applying": "در حال اعمال فیلتر...",
     "filter_cancelled": "عملیات فیلتر لغو شد",
+    "filtering_in_progress": "در حال فیلترینگ",
+    "filter_complete": "فیلترینگ تکمیل شد",
     "excel_created": "فایل اکسل با موفقیت ایجاد شد...",
     "error_occurred": "خطایی رخ داد: {0}",
     "error": "خطا",
@@ -891,6 +935,9 @@ fa_dict = {
 
 # Urdu language dictionary
 ur_dict = {
+    "theme_settings": "تھیم:",
+    "light_mode": "لائٹ موڈ",
+    "dark_mode": "ڈارک موڈ",
     "open_file": "فائل کھولیں",
     "open_file_location": "فائل کا مقام کھولیں",
     "select_folder": "📁 فولڈر منتخب کریں",
@@ -918,6 +965,8 @@ ur_dict = {
     "files_loading": "فائلیں لوڈ ہو رہی ہیں...",
     "filter_applying": "فلٹر لاگو کیا جا رہا ہے...",
     "filter_cancelled": "فلٹر آپریشن منسوخ کر دیا گیا",
+    "filtering_in_progress": "فلٹرنگ جاری ہے",
+    "filter_complete": "فلٹرنگ مکمل ہو گئی",
     "excel_created": "ایکسل فائل کامیابی سے بنائی گئی...",
     "error_occurred": "ایک خرابی پیش آئی: {0}",
     "error": "خرابی",
@@ -1041,6 +1090,9 @@ ur_dict = {
 
 # Hindi language dictionary
 hi_dict = {
+    "theme_settings": "थीम:",
+    "light_mode": "लाइट मोड",
+    "dark_mode": "डार्क मोड",
     "open_file": "फ़ाइल खोलें",
     "open_file_location": "फ़ाइल स्थान खोलें",
     "select_folder": "📁 फ़ोल्डर चुनें",
@@ -1068,6 +1120,8 @@ hi_dict = {
     "files_loading": "फ़ाइलें लोड हो रही हैं...",
     "filter_applying": "फिल्टर लागू हो रहा है...",
     "filter_cancelled": "फ़िल्टरिंग ऑपरेशन रद्द किया गया",
+    "filtering_in_progress": "फ़िल्टरिंग प्रगति पर है",
+    "filter_complete": "फ़िल्टरिंग पूर्ण हुआ",
     "excel_created": "एक्सेल फ़ाइल सफलतापूर्वक बनाई गई...",
     "error_occurred": "एक त्रुटि हुई: {0}",
     "error": "त्रुटि",
@@ -1191,6 +1245,9 @@ hi_dict = {
 
 # Chinese Simplified language dictionary
 zh_dict = {
+    "theme_settings": "主题:",
+    "light_mode": "浅色模式",
+    "dark_mode": "深色模式",
     "open_file": "打开文件",
     "open_file_location": "打开文件位置",
     "select_folder": "📁 选择文件夹",
@@ -1218,6 +1275,8 @@ zh_dict = {
     "files_loading": "正在加载文件...",
     "filter_applying": "正在应用筛选器...",
     "filter_cancelled": "筛选操作已取消",
+    "filtering_in_progress": "筛选进行中",
+    "filter_complete": "筛选完成",
     "excel_created": "Excel文件创建成功...",
     "error_occurred": "发生错误: {0}",
     "error": "错误",
@@ -1341,6 +1400,9 @@ zh_dict = {
 
 # Japanese language dictionary
 ja_dict = {
+    "theme_settings": "テーマ:",
+    "light_mode": "ライトモード",
+    "dark_mode": "ダークモード",
     "open_file": "ファイルを開く",
     "open_file_location": "ファイルの場所を開く",
     "select_folder": "📁 フォルダを選択",
@@ -1368,6 +1430,8 @@ ja_dict = {
     "files_loading": "ファイルを読み込み中...",
     "filter_applying": "フィルターを適用中...",
     "filter_cancelled": "フィルタリング操作がキャンセルされました",
+    "filtering_in_progress": "フィルタリング進行中",
+    "filter_complete": "フィルタリング完了",
     "excel_created": "Excelファイルが正常に作成されました...",
     "error_occurred": "エラーが発生しました: {0}",
     "error": "エラー",
