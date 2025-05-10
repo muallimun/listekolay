@@ -20,6 +20,9 @@ import concurrent.futures  # For parallel processing
 import time  # For performance measurement
 from search_translations import search_translations
 
+# Basit sürükle-bırak desteği için sabit
+DND_FILES = "DND_FILES"
+
 # Tema renk sabitleri
 # Açık Tema Renkleri
 LIGHT_MODE_COLORS = {
@@ -123,6 +126,8 @@ translations = {
     "tr": {
         "open_file": "Dosyayı Aç",
         "open_file_location": "Dosya Konumunu Aç",
+        "copy_filename": "Dosya Adını Kopyala",
+        "copy_filepath": "Dosya Yolunu Kopyala",
         "select_folder": "📁 Klasör Seç",
         "no_folder_selected": "Henüz bir klasör seçilmedi",
         "start": "▶️ Başlat",
@@ -309,6 +314,8 @@ translations = {
     "en": {
         "select_folder": "📁 Select Folder",
         "extension_not_found": "No extension found",
+        "copy_filename": "Copy File Name",
+        "copy_filepath": "Copy File Path",
         "no_folder_selected": "No folder selected yet",
         "start": "▶️ Start",
         "apply_filter": "🔍 Apply Filter",
@@ -494,6 +501,8 @@ translations = {
     "ar": {
         "open_file": "فتح الملف",
         "open_file_location": "فتح موقع الملف",
+        "copy_filename": "نسخ اسم الملف",
+        "copy_filepath": "نسخ مسار الملف",
         "select_folder": "📁 اختر مجلد",
         "no_folder_selected": "لم يتم اختيار مجلد بعد",
         "start": "▶️ ابدأ",
@@ -652,7 +661,7 @@ class FileManagerApp:
         self.current_language = "tr"  # Default language is Turkish
         
         # Uygulama sürüm bilgisi
-        self.current_version = "5.0.1"
+        self.current_version = "5.1.0"
         self.github_version_url = "https://github.com/muallimun/listekolay/raw/main/listekolay_version.txt"
         self.github_download_url = "https://github.com/muallimun/listekolay/releases/latest"
         
@@ -1512,17 +1521,37 @@ class FileManagerApp:
         )
         self.file_search_label.pack(side=tk.LEFT, padx=(0, 5))
         
+        # Arama girişi için container - Entry ve temizleme butonu içerir
+        search_entry_container = tk.Frame(search_frame, bg="#e9ecef")
+        search_entry_container.pack(side=tk.LEFT)
+        
         # Add the search entry field
         self.file_search_var = tk.StringVar()
         self.file_search_var.trace("w", self.filter_file_list)
         self.file_search_entry = tk.Entry(
-            search_frame,
+            search_entry_container,
             textvariable=self.file_search_var,
             font=("Segoe UI", 9),
-            width=12,
+            width=15,  # Biraz daha geniş
             fg="#000000"  # Metin rengini her zaman siyah olarak ayarla
         )
         self.file_search_entry.pack(side=tk.LEFT)
+        
+        # Temizleme butonu
+        self.clear_search_button = tk.Button(
+            search_entry_container,
+            text="✕",
+            font=("Segoe UI", 7),
+            bg="#e9ecef",
+            fg="#666666",
+            relief=tk.FLAT,
+            command=self.clear_search_field,
+            padx=0,
+            pady=0,
+            width=2
+        )
+        self.clear_search_button.pack(side=tk.LEFT, padx=(0, 2))
+        self.clear_search_button.config(state=tk.DISABLED)  # Başlangıçta devre dışı
         
         # Create a placeholder for the search entry
         self.file_search_entry.insert(0, self.get_text("search_files"))
@@ -1532,6 +1561,10 @@ class FileManagerApp:
         # Bind focus events to handle placeholder text
         self.file_search_entry.bind("<FocusIn>", self.on_search_focus_in)
         self.file_search_entry.bind("<FocusOut>", self.on_search_focus_out)
+        
+        # Arama ipucu ekle
+        search_tooltip = "Filtre dosya adları ve uzantılara göre yapılır"
+        self.create_tooltip(self.file_search_entry, search_tooltip)
         
         # View mode buttons - compact design
         controls_container = tk.Frame(file_list_header_frame, bg="#e9ecef")
@@ -1683,52 +1716,41 @@ class FileManagerApp:
         # Get current year for copyright notice
         current_year = datetime.datetime.now().year
         
-        # Create copyright text with current year
-        copyright_text = f"© {current_year} Muallimun.Net - ListeKolay"
+        # Left side - Program name and copyright
+        program_text = f"© {current_year} Muallimun.Net - ListeKolay"
         
-        # Left side - Copyright
-        copyright_label = tk.Label(
+        program_label = tk.Label(
             footer_frame, 
-            text=copyright_text,
+            text=program_text,
             font=("Segoe UI", 8), 
             bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"], 
             fg=LIGHT_MODE_COLORS["secondary_text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["secondary_text"]
         )
-        copyright_label.pack(side=tk.LEFT, padx=10)
+        program_label.pack(side=tk.LEFT, padx=10)
         
-        # Sürüm bilgisi ve güncelleme butonu için özel çerçeve
-        version_frame = tk.Frame(footer_frame, bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"])
-        version_frame.pack(side=tk.RIGHT, padx=10)
-        
-        # Sürüm bilgisi
+        # Version number next to program name
         version_label = tk.Label(
-            version_frame,
+            footer_frame,
             text=f"v{self.current_version}",
-            font=("Segoe UI", 7),
+            font=("Segoe UI", 8),
             bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"], 
             fg=LIGHT_MODE_COLORS["secondary_text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["secondary_text"]
         )
-        version_label.pack(side=tk.LEFT, padx=(0, 5))
+        version_label.pack(side=tk.LEFT, padx=(2, 0))
         
-        # Güncelleme ikonu (⟳) button olarak
-        update_button = tk.Button(
-            version_frame,
+        # Güncelleme ikonu (Label olarak) - Kesinlikle renkli olacak
+        update_icon = tk.Label(
+            footer_frame,
             text="⟳",
-            font=("Segoe UI", 8),
+            font=("Segoe UI", 13, "bold"),  # Daha da büyük font
             bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"],
-            fg=LIGHT_MODE_COLORS["accent"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["accent"],  # Theme-aware accent color
-            relief=tk.FLAT,
-            borderwidth=0,
-            highlightthickness=0,
+            fg="#FF4500" if not self.is_dark_mode.get() else "#FF9800",  # Turuncu-kırmızı renk
             cursor="hand2",  # El işareti
-            width=2,
-            height=1,
-            padx=0,
-            pady=0,
-            command=lambda: self.check_for_updates(False)
+            padx=2
         )
-        update_button.pack(side=tk.LEFT)
-        self.create_tooltip(update_button, self.get_text("check_updates"))
+        update_icon.bind("<Button-1>", lambda e: self.check_for_updates(False))  # Tıklama olayını bağla
+        update_icon.pack(side=tk.LEFT, padx=(5, 0))
+        self.create_tooltip(update_icon, self.get_text("check_updates"))
         
         # Right side - Website link
         website_link = tk.Label(
@@ -1825,17 +1847,87 @@ class FileManagerApp:
         # Bind right-click event for context menu
         self.file_tree.bind("<Button-3>", self.show_context_menu)
         
-        # Create right-click context menu (simplified to only show "Open file location")
+        # Bind double-click event to open file
+        # Bind double-click event to open file
+        self.file_tree.bind("<Double-1>", lambda event: self.open_selected_file())
+        
+        # Create right-click context menu (enhanced with more options)
         self.context_menu = tk.Menu(
             self.root, 
             tearoff=0, 
             bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"], 
             fg=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"]
         )
-        # Add only "Open file location" option to context menu
+        
+        # Open file option
+        self.context_menu.add_command(
+            label=self.get_text("open_file"),
+            command=self.open_selected_file
+        )
+        
+        # Open file location option
         self.context_menu.add_command(
             label=self.get_text("open_file_location"),
             command=self.open_file_location
+        )
+        
+        # Add separator
+        self.context_menu.add_separator()
+        
+        # Preview file option
+        self.context_menu.add_command(
+            label=self.get_text("preview_file"),
+            command=self.preview_selected_file
+        )
+        
+        # Add separator
+        self.context_menu.add_separator()
+        
+        # Copy filename option
+        self.context_menu.add_command(
+            label=self.get_text("copy_filename"),
+            command=self.copy_filename_to_clipboard
+        )
+        
+        # Copy file path option
+        self.context_menu.add_command(
+            label=self.get_text("copy_filepath"),
+            command=self.copy_filepath_to_clipboard
+        )
+        
+        # Set up context menu for preview mode thumbnails
+        self.preview_context_menu = tk.Menu(
+            self.root, 
+            tearoff=0, 
+            bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"], 
+            fg=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"]
+        )
+        
+        # Open file option for preview
+        self.preview_context_menu.add_command(
+            label=self.get_text("open_file"),
+            command=self.open_preview_file
+        )
+        
+        # Open file location option for preview
+        self.preview_context_menu.add_command(
+            label=self.get_text("open_file_location"),
+            command=self.open_preview_file_location
+        )
+        
+        # Add separator
+        self.preview_context_menu.add_separator()
+        
+        # Copy filename option for preview
+        self.preview_context_menu.add_command(
+            label=self.get_text("copy_filename"),
+            command=self.copy_preview_filename_to_clipboard
+        )
+        
+        # Copy file path option for preview
+        self.preview_context_menu.add_command(
+            label=self.get_text("copy_filepath"),
+            command=self.copy_preview_filepath_to_clipboard
         )
         
     def show_context_menu(self, event):
@@ -1869,7 +1961,16 @@ class FileManagerApp:
             
         # Extract file name and path
         file_name = values[0]
-        file_path = values[2]
+        file_ext = values[1]
+        file_dir_path = values[2]
+        
+        # Construct full file path
+        # For Windows paths that already include filename, use as-is
+        if os.path.basename(file_dir_path) == file_name:
+            file_path = file_dir_path
+        else:
+            # Otherwise join directory and filename
+            file_path = os.path.join(file_dir_path, file_name)
         
         # Check if the file exists
         if not os.path.isfile(file_path):
@@ -1897,8 +1998,18 @@ class FileManagerApp:
         if not values:
             return  # No values found
             
-        # Extract file path
-        file_path = values[2]
+        # Extract file path and name
+        file_name = values[0]
+        file_ext = values[1]
+        file_dir_path = values[2]
+        
+        # Construct full file path
+        # For Windows paths that already include filename, use as-is
+        if os.path.basename(file_dir_path) == file_name:
+            file_path = file_dir_path
+        else:
+            # Otherwise join directory and filename
+            file_path = os.path.join(file_dir_path, file_name)
         
         # Check if the file exists
         if not os.path.isfile(file_path):
@@ -2371,13 +2482,46 @@ class FileManagerApp:
             self.file_search_entry.delete(0, tk.END)
             # Set text color to always black for better visibility
             self.file_search_entry.config(fg="#000000")
+            # Temizleme butonunu devre dışı bırak (placeholder vardı)
+            if hasattr(self, 'clear_search_button'):
+                self.clear_search_button.config(state=tk.DISABLED)
+        else:
+            # İçerik varsa temizleme butonunu etkinleştir
+            if hasattr(self, 'clear_search_button'):
+                self.clear_search_button.config(state=tk.NORMAL)
+        
+        # Highlight search field with a light blue background when focused
+        self.file_search_entry.config(bg="#e6f2ff")
 
     def on_search_focus_out(self, event):
         """Handle focus out event for search entry"""
         if not self.file_search_entry.get():
             self.file_search_entry.insert(0, self.get_text("search_files"))
             self.file_search_entry.config(fg='gray')
+            # Temizleme butonunu devre dışı bırak
+            if hasattr(self, 'clear_search_button'):
+                self.clear_search_button.config(state=tk.DISABLED)
+        else:
+            # İçerik varsa temizleme butonunu aktif tut
+            if hasattr(self, 'clear_search_button'):
+                self.clear_search_button.config(state=tk.NORMAL)
+        
+        # Reset background color when focus is lost
+        self.file_search_entry.config(bg="white")
 
+    def clear_search_field(self):
+        """Arama alanını temizler ve tüm dosyaları gösterir"""
+        # Placeholder metni olmadan alanı temizle
+        self.file_search_entry.delete(0, tk.END)
+        # Odağı arama kutusuna getir
+        self.file_search_entry.focus_set()
+        # Arama alanını odaklandığında olduğu gibi işaretle
+        self.file_search_entry.config(bg="#e6f2ff", fg="#000000")
+        # Temizleme butonunu devre dışı bırak
+        self.clear_search_button.config(state=tk.DISABLED)
+        # Dosya listesini güncelle
+        self.filter_file_list()
+    
     def filter_file_list(self, *args):
         """Filter the file list based on search text"""
         search_text = self.file_search_var.get().lower()
@@ -2389,6 +2533,13 @@ class FileManagerApp:
         # Clear the file list
         self.clear_file_list()
         
+        # Temizleme butonunun durumunu güncelle (yeni)
+        if hasattr(self, 'clear_search_button'):
+            if search_text and search_text != self.get_text("search_files").lower():
+                self.clear_search_button.config(state=tk.NORMAL)
+            else:
+                self.clear_search_button.config(state=tk.DISABLED)
+            
         # If search text is empty or placeholder, show all files
         if not search_text:
             if hasattr(self, 'all_files'):
@@ -3254,6 +3405,8 @@ class FileManagerApp:
                             # Add click event - get file index from current preview files
                             file_index = next((i for i, f in enumerate(self.current_preview_files) if f.get("path") == os.path.dirname(path) and f.get("name") == os.path.basename(path)), -1)
                             img_label.bind("<Button-1>", lambda e, p=path, idx=file_index: self.create_file_preview_window(p, idx))
+                            # Add right-click context menu
+                            img_label.bind("<Button-3>", lambda e, p=path: self.show_preview_context_menu(e, p))
                         else:
                             # No preview, show extension icon with improved styling
                             ext = os.path.splitext(path)[1].lower().replace(".", "")
@@ -3272,6 +3425,8 @@ class FileManagerApp:
                             # Add click event - get file index from current preview files
                             file_index = next((i for i, f in enumerate(self.current_preview_files) if f.get("path") == os.path.dirname(path) and f.get("name") == os.path.basename(path)), -1)
                             ext_label.bind("<Button-1>", lambda e, p=path, idx=file_index: self.create_file_preview_window(p, idx))
+                            # Add right-click context menu
+                            ext_label.bind("<Button-3>", lambda e, p=path: self.show_preview_context_menu(e, p))
                         
                         # File details container to organize information
                         details_frame = tk.Frame(
@@ -4535,6 +4690,9 @@ class FileManagerApp:
             # Sort files before applying filter to ensure consistent results
             self.sort_files()
             
+            # Set flag to indicate this is the first load
+            self.is_first_load = True
+            
             # Apply the initial filter immediately
             self.apply_filter_internal()
             
@@ -5114,6 +5272,11 @@ class FileManagerApp:
             # Check if any extensions are selected
             any_selected = any(self.selected_extensions[ext].get() for ext in self.selected_extensions)
             
+            # OPTIMIZATION: If this is the first load (right after load_files), show all files
+            if hasattr(self, 'is_first_load') and self.is_first_load:
+                self.is_first_load = False  # Reset flag after first use
+                any_selected = False  # Force showing all files at first load
+                
             # Create a set of selected extensions for faster lookup
             # OPTIMIZATION: Use set for O(1) lookup time instead of linear search
             selected_extensions_set = {ext.lower() for ext in self.selected_extensions 
@@ -6026,22 +6189,12 @@ class FileManagerApp:
                 # Get full file path
                 file_path = os.path.join(prev_file["path"], prev_file["name"])
                 
-                # Try to update existing preview window
-                if not self._update_preview_content(file_path):
-                    # If update fails, fall back to creating a new window
-                    if hasattr(self, 'preview_window'):
-                        try:
-                            window_geometry = self.preview_window.geometry()
-                            self.preview_window.destroy()
-                            self.create_file_preview_window(file_path, self.current_preview_index)
-                            # Restore window position and size
-                            self.preview_window.geometry(window_geometry)
-                        except Exception as e:
-                            logging.warning(f"Could not restore preview window position: {str(e)}")
-                            # If error occurs, just create a new window
-                            self.create_file_preview_window(file_path, self.current_preview_index)
-                    else:
-                        self.create_file_preview_window(file_path, self.current_preview_index)
+                # Always try to update existing preview window first
+                result = self._update_preview_content(file_path)
+                if not result:
+                    # Only if updating fails, create a new window
+                    logging.debug("Falling back to creating a new preview window")
+                    self.create_file_preview_window(file_path, self.current_preview_index)
             
     def _go_to_next_file(self):
         """Navigate to the next file in the preview window"""
@@ -6058,22 +6211,12 @@ class FileManagerApp:
                 # Get full file path
                 file_path = os.path.join(next_file["path"], next_file["name"])
                 
-                # Try to update existing preview window
-                if not self._update_preview_content(file_path):
-                    # If update fails, fall back to creating a new window
-                    if hasattr(self, 'preview_window'):
-                        try:
-                            window_geometry = self.preview_window.geometry()
-                            self.preview_window.destroy()
-                            self.create_file_preview_window(file_path, self.current_preview_index)
-                            # Restore window position and size
-                            self.preview_window.geometry(window_geometry)
-                        except Exception as e:
-                            logging.warning(f"Could not restore preview window position: {str(e)}")
-                            # If error occurs, just create a new window
-                            self.create_file_preview_window(file_path, self.current_preview_index)
-                    else:
-                        self.create_file_preview_window(file_path, self.current_preview_index)
+                # Always try to update existing preview window first
+                result = self._update_preview_content(file_path)
+                if not result:
+                    # Only if updating fails, create a new window
+                    logging.debug("Falling back to creating a new preview window")
+                    self.create_file_preview_window(file_path, self.current_preview_index)
             
     def on_subfolder_changed(self):
         """Called when the Include Subfolders checkbox state changes"""
@@ -7102,6 +7245,102 @@ if __name__ == "__main__":
         info_label.pack(pady=5)
 
 
+
+    
+    def copy_filename_to_clipboard(self):
+        """Copy the selected file name to clipboard"""
+        selected_items = self.file_tree.selection()
+        if not selected_items:
+            return  # No selection
+            
+        # Get the first selected item
+        item = selected_items[0]
+        # Get the values for this item
+        values = self.file_tree.item(item, "values")
+        
+        if not values:
+            return  # No values found
+            
+        # Extract file name
+        file_name = values[0]
+        
+        # Copy to clipboard
+        self.root.clipboard_clear()
+        self.root.clipboard_append(file_name)
+        
+        # Show a brief status message
+        self.update_status("Copied to clipboard")
+        
+    def copy_filepath_to_clipboard(self):
+        """Copy the selected file path to clipboard"""
+        selected_items = self.file_tree.selection()
+        if not selected_items:
+            return  # No selection
+            
+        # Get the first selected item
+        item = selected_items[0]
+        # Get the values for this item
+        values = self.file_tree.item(item, "values")
+        
+        if not values:
+            return  # No values found
+            
+        # Extract file path
+        file_path = values[2]
+        
+        # Copy to clipboard
+        self.root.clipboard_clear()
+        self.root.clipboard_append(file_path)
+        
+        # Show a brief status message
+        self.update_status("Copied to clipboard")
+        
+    def on_drop(self, event):
+        """Handle dropped files from external sources"""
+        # Get the dropped file path(s)
+        try:
+            # Process the data - format depends on platform
+            # In Windows, it will be in format "{C:/path/to/file}"
+            # In Linux/Mac, it will be a normal file path
+            data = event.data
+            
+            # Clean up the path
+            if data.startswith('{') and data.endswith('}'):
+                # Windows format
+                data = data[1:-1]
+            
+            # Remove any quotes
+            data = data.replace('"', '')
+            
+            paths = data.split()  # Multiple files are space-separated
+            
+            # Check if any of the paths are actually files
+            valid_files = [path for path in paths if os.path.isfile(path)]
+            
+            if valid_files:
+                # If files are dropped, we can open them directly (preview first file)
+                self.create_file_preview_window(valid_files[0])
+                
+                # Show status message
+                if len(valid_files) == 1:
+                    self.update_status(f"Dosya önizleniyor: {os.path.basename(valid_files[0])}")
+                else:
+                    self.update_status(f"{len(valid_files)} dosya sürüklendi. İlk dosya önizleniyor.")
+            
+            # If a folder is dropped, update the folder selection
+            valid_folders = [path for path in paths if os.path.isdir(path)]
+            if valid_folders:
+                # Use first valid folder
+                self.folder_var.set(valid_folders[0])
+                self.update_status(f"Klasör değiştirildi: {valid_folders[0]}")
+                
+                # Start folder loading
+                self.load_files_thread()
+        
+        except Exception as e:
+            logging.error(f"Error processing dropped files: {str(e)}")
+            self.update_status(f"Sürüklenen dosyaları işlerken hata oluştu: {str(e)}")
+        
     def open_file_location(self):
         """Open the location of the selected file in the file explorer"""
         # Get the selected item
@@ -7117,8 +7356,18 @@ if __name__ == "__main__":
         if not values:
             return  # No values found
             
-        # Extract file path
-        file_path = values[2]
+        # Extract file name, extension and directory path
+        file_name = values[0]
+        file_ext = values[1]
+        dir_path = values[2]
+        
+        # Construct the full file path to find the correct directory
+        # For Windows paths that already include filename, use as-is
+        if os.path.basename(dir_path) == file_name:
+            file_path = dir_path
+        else:
+            # Otherwise join directory and filename
+            file_path = os.path.join(dir_path, file_name)
         
         # Open location using common method
         self.open_file_location_by_path(file_path)
@@ -7191,6 +7440,43 @@ if __name__ == "__main__":
                 self.get_text("error"),
                 f"{self.get_text('error_open_url')}: {str(e)}"
             )
+            
+    def show_preview_context_menu(self, event, file_path):
+        """Show context menu on right-click in the preview mode"""
+        # Store the current file path for context menu actions
+        self.current_preview_file_path = file_path
+        
+        # Show the context menu
+        try:
+            self.preview_context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            # Make sure to release the grab
+            self.preview_context_menu.grab_release()
+    
+    def open_preview_file(self):
+        """Open the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            self.open_file(self.current_preview_file_path)
+            
+    def open_preview_file_location(self):
+        """Open the location of the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            self.open_file_location_by_path(self.current_preview_file_path)
+            
+    def copy_preview_filename_to_clipboard(self):
+        """Copy the filename of the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            file_name = os.path.basename(self.current_preview_file_path)
+            self.root.clipboard_clear()
+            self.root.clipboard_append(file_name)
+            self.update_status(f"{self.get_text('copied_to_clipboard')}: {file_name}")
+            
+    def copy_preview_filepath_to_clipboard(self):
+        """Copy the file path of the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            self.root.clipboard_clear()
+            self.root.clipboard_append(self.current_preview_file_path)
+            self.update_status(f"{self.get_text('copied_to_clipboard')}: {self.current_preview_file_path}")
 
 
 if __name__ == "__main__":
