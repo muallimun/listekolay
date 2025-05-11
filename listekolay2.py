@@ -17,6 +17,7 @@ import requests
 import shutil
 import random
 import concurrent.futures  # For parallel processing
+import multiprocessing  # For CPU-bound tasks (GIL bypass)
 import time  # For performance measurement
 from search_translations import search_translations
 
@@ -661,7 +662,7 @@ class FileManagerApp:
         self.current_language = "tr"  # Default language is Turkish
         
         # Uygulama sürüm bilgisi
-        self.current_version = "5.1.0"
+        self.current_version = "5.1.1"
         self.github_version_url = "https://github.com/muallimun/listekolay/raw/main/listekolay_version.txt"
         self.github_download_url = "https://github.com/muallimun/listekolay/releases/latest"
         
@@ -2570,6 +2571,8 @@ class FileManagerApp:
         # Tema renk sabitlerini seç
         theme = DARK_MODE_COLORS if is_dark else LIGHT_MODE_COLORS
         
+        logging.info(f"Tema değiştiriliyor: {'Koyu Mod' if is_dark else 'Açık Mod'}")
+        
         # Ana arka plan rengi
         self.root.configure(bg=theme["bg"])
         self.main_frame.configure(bg=theme["bg"])
@@ -2590,14 +2593,40 @@ class FileManagerApp:
                 # Normal metin tema rengine uymalı
                 self.file_search_entry.config(fg=theme["text"])
         
+        # AÇIK MOD: Butonların görünürlük sorunu için özel işlem
+        if not is_dark:
+            # Önemli butonları özellikle güncelle (saydam ve beyaz metin sorununu gider)
+            for btn_name in ['start_btn', 'select_folder_btn', 'cancel_btn', 'apply_filter_btn']:
+                if hasattr(self, btn_name):
+                    btn = getattr(self, btn_name)
+                    # Buton arkaplan rengini tema rengine göre güncelle
+                    current_bg = btn.cget("bg")
+                    if current_bg == "" or current_bg.lower() == "#ffffff":  # Boş veya beyaz renk
+                        # Buton türüne özel arka plan rengi belirle
+                        if btn_name == 'start_btn':
+                            btn.configure(bg=theme["start_button"], fg=theme["button_text"])
+                        elif btn_name == 'select_folder_btn': 
+                            btn.configure(bg=theme["folder_button"], fg=theme["button_text"])
+                        elif btn_name == 'cancel_btn':
+                            btn.configure(bg=theme["cancel_button"], fg=theme["button_text"])
+                        elif btn_name == 'apply_filter_btn':
+                            btn.configure(bg=theme["filter_button"], fg=theme["button_text"])
+                        else:
+                            # Genel buton rengi
+                            btn.configure(bg=theme["button"], fg=theme["button_text"])
+        
         # Config dosyasına kaydet
         self.save_config()
+        
+        logging.info("Tema başarıyla değiştirildi")
         
     def _update_widget_colors(self, parent, theme):
         """Belirtilen parent widget'ın altındaki tüm widget'ların renklerini güncelle"""
         # Parent widget'ın kendisini güncelle
         if isinstance(parent, (tk.Frame, tk.LabelFrame, tk.Label, tk.Button)):
-            parent.configure(bg=theme["bg"])
+            # OPTIMIZASYON: Önce mevcut rengi kontrol et, gerekli olmayan renk güncellemelerini önle
+            if parent.cget("bg") != theme["bg"]:
+                parent.configure(bg=theme["bg"])
             
             # LabelFrame başlıkları için özel işlem
             if isinstance(parent, tk.LabelFrame):
@@ -2612,22 +2641,29 @@ class FileManagerApp:
                     # Label metnini tema rengine ayarla (gri, koyu gri, açık gri, vs dikkate almadan)
                     # Tooltip rengi veya buton özel renkleri olmadığı sürece tüm metinleri güncelle
                     if parent.cget("background") != "#ffffcc":  # Tooltip rengini kontrol et
-                        parent.configure(fg=theme["text"])
+                        if parent.cget("fg") != theme["text"]:
+                            parent.configure(fg=theme["text"])
             
             # Butonlar için özel ayarlar
             elif isinstance(parent, tk.Button):
                 # Metin rengini güncelle - Filtreleme bölümündeki butonlar için özel kontrol
                 button_text = parent.cget("text")
                 
+                # SORUN ÇÖZÜMÜ: Tema renkleri ve buton renkleri arasındaki tutarsızlıkları önlemek için
+                # Tema geçişlerinde butonların görünüm sorunu düzeltildi
+                
+                # AYDIRLIK MOD: Beyaz metinli saydam butonlar sorununu çöz
+                is_dark_mode = self.is_dark_mode.get()
+                
                 # Filtreleme bölümündeki butonlar için özel işlem
                 if button_text == self.get_text("select_all") or button_text == self.get_text("clear_all") or button_text == self.get_text("apply_filter") or button_text == "🔍" or button_text == self.get_text("filter_label"):
                     # Bu butonlar için siyah/beyaz metin rengi (temaya bağlı)
-                    parent.configure(fg=theme["text"])
+                    if parent.cget("fg") != theme["text"]:
+                        parent.configure(fg=theme["text"])
                 else:
                     # Diğer butonlar için standart buton metin rengi
-                    parent.configure(fg=theme["button_text"])
-                
-                # Buton tipine göre arkaplan rengi atama
+                    if parent.cget("fg") != theme["button_text"]:
+                        parent.configure(fg=theme["button_text"])
                 
                 # Buton türlerine göre renk atamaları
                 if "✖️ Kapat" in button_text or "❌" in button_text:
@@ -2661,6 +2697,50 @@ class FileManagerApp:
         # Tüm alt widget'ları yinelemeli olarak güncelle
         for child in parent.winfo_children():
             self._update_widget_colors(child, theme)
+            
+    def _force_theme_update(self):
+        """
+        Tema değişikliklerini yeniden uygula. Bu metod, dil değişikliğinden sonra 
+        butonların doğru renklenmesi için kullanılır.
+        """
+        logging.info("Tema değişiklikleri yeniden uygulanıyor (dil değişikliğinden sonra)")
+        # Mevcut tema renkleri
+        theme = DARK_MODE_COLORS if self.is_dark_mode.get() else LIGHT_MODE_COLORS
+        
+        # Önemli butonların renklerini doğrudan güncelle
+        for btn_name in ['start_btn', 'select_folder_btn', 'cancel_btn', 'apply_filter_btn']:
+            if hasattr(self, btn_name):
+                btn = getattr(self, btn_name)
+                if btn_name == 'start_btn':
+                    btn.configure(bg=theme["start_button"], fg=theme["button_text"])
+                elif btn_name == 'select_folder_btn': 
+                    btn.configure(bg=theme["folder_button"], fg=theme["button_text"])
+                elif btn_name == 'cancel_btn':
+                    btn.configure(bg=theme["cancel_button"], fg=theme["button_text"])
+                elif btn_name == 'apply_filter_btn':
+                    btn.configure(bg=theme["filter_button"], fg=theme["button_text"])
+        
+        # Önemli butonları hemen güncelle (listede olmayanlar)
+        # Özel kontrolleri genel taramaya bırakmak yerine doğrudan işleyelim
+        if hasattr(self, 'view_frame') and self.view_frame:
+            for child in self.view_frame.winfo_children():
+                if isinstance(child, tk.Button):
+                    button_text = child.cget("text")
+                    # Görünüm modu butonları
+                    if "Listele" in button_text or "List" in button_text:
+                        if self.view_mode_var.get() == "list":
+                            child.configure(bg=theme["active_view_button"])
+                        else:
+                            child.configure(bg=theme["inactive_view_button"])
+                        child.configure(fg=theme["button_text"])
+                    elif "Ön İzleme" in button_text or "Preview" in button_text:
+                        if self.view_mode_var.get() == "preview":
+                            child.configure(bg=theme["active_view_button"])
+                        else:
+                            child.configure(bg=theme["inactive_view_button"])
+                        child.configure(fg=theme["button_text"])
+        
+        logging.info("Tema değişiklikleri başarıyla yeniden uygulandı")
     
     def update_ui_state(self):
         # Update UI state based on the current application state
@@ -3347,7 +3427,7 @@ class FileManagerApp:
                         frame.grid_propagate(False)  # Keep frame size fixed
                         return frame
                         
-                    # OPTIMIZATION: Process thumbnails for all files in the batch
+                    # PERFORMANCE OPTIMIZATION: Process thumbnails for all files in the batch using parallel processing
                     thumbnails = []
                     errors = []
                     
@@ -3356,37 +3436,63 @@ class FileManagerApp:
                     row = idx // max_columns
                     col = idx % max_columns
                     
-                    # Process each file in the batch to generate thumbnails
-                    for file_name, file_path, extension, file_info in batch_files:
+                    # Parallel file preview function that doesn't rely on self
+                    def generate_preview_for_file(file_data):
                         try:
-                            # OPTIMIZATION: Use lower resolution previews for the general preview page
-                            # This significantly improves performance while maintaining usability
-                            preview_width_reduced = int(preview_width * 0.7)  # 70% of original size for overview
-                            preview_height_reduced = int(preview_height * 0.7)  # 70% of original size for overview
-                            preview_img = self._create_file_preview(file_path, preview_width_reduced, preview_height_reduced)
+                            file_name, file_path, extension, file_info, idx_position = file_data
                             
                             # Calculate grid position
-                            idx_position = processed_count + len(thumbnails) + len(errors)
                             r = idx_position // max_columns
                             c = idx_position % max_columns
                             
-                            if preview_img:
-                                # Store thumbnail info for UI update
-                                thumbnails.append((r, c, preview_img, file_path, file_name, file_info.get("size", 0)))
-                            else:
-                                # Store error info for UI update
-                                errors.append((r, c, file_path))
+                            # OPTIMIZATION: Use lower resolution previews for the general preview page
+                            preview_width_reduced = int(preview_width * 0.7)  # 70% of original size for overview
+                            preview_height_reduced = int(preview_height * 0.7)  # 70% of original size for overview
+                            
+                            # Try to generate preview
+                            try:
+                                preview_img = self._create_file_preview(file_path, preview_width_reduced, preview_height_reduced)
+                                if preview_img:
+                                    return ("success", (r, c, preview_img, file_path, file_name, file_info.get("size", 0)))
+                                else:
+                                    return ("error", (r, c, file_path))
+                            except Exception as e:
+                                logging.error(f"Error creating thumbnail for {file_path}: {str(e)}")
+                                return ("error", (r, c, file_path))
+                        except Exception as main_e:
+                            logging.error(f"Main preview generator error: {str(main_e)}")
+                            return ("error", (-1, -1, "Unknown file"))
+                    
+                    # Determine the number of files to process
+                    num_files = len(batch_files)
+                    
+                    # Prepare file data for processing
+                    file_data_list = []
+                    for i, (file_name, file_path, extension, file_info) in enumerate(batch_files):
+                        idx_position = processed_count + i
+                        file_data_list.append((file_name, file_path, extension, file_info, idx_position))
+                    
+                    # Use ThreadPoolExecutor for IO-bound preview generation
+                    # This is better than ProcessPoolExecutor for this task since most operations are IO-bound
+                    # and the GIL is frequently released during file operations
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, num_files)) as executor:
+                        future_to_file = {executor.submit(generate_preview_for_file, file_data): file_data 
+                                         for file_data in file_data_list}
+                        
+                        # Collect results as they complete
+                        for future in concurrent.futures.as_completed(future_to_file):
+                            if self.cancel_flag:
+                                executor.shutdown(wait=False)
+                                return
                                 
-                        except Exception as e:
-                            logging.error(f"Error creating thumbnail for {file_path}: {str(e)}")
-                            
-                            # Calculate grid position for error display
-                            idx_position = processed_count + len(thumbnails) + len(errors)
-                            r = idx_position // max_columns
-                            c = idx_position % max_columns
-                            
-                            # Store error info for UI update
-                            errors.append((r, c, file_path))
+                            try:
+                                result_type, result_data = future.result()
+                                if result_type == "success":
+                                    thumbnails.append(result_data)
+                                else:
+                                    errors.append(result_data)
+                            except Exception as e:
+                                logging.error(f"Error collecting preview result: {str(e)}")
                     
                     # Add all thumbnails to UI in main thread with improved details
                     def add_thumbnail(r, c, img, path, name, size):
@@ -3724,48 +3830,39 @@ class FileManagerApp:
         # Normalize file path to avoid Windows/Unix path issues
         file_path = os.path.normpath(file_path)
         
+        # PERFORMANCE OPTIMIZATION: Implement a thread-safe LRU caching mechanism for thumbnails
+        # This prevents regenerating the same thumbnails multiple times
+        # Create a cache key based on the file path and requested dimensions
+        cache_key = f"{file_path}_{max_width}_{max_height}"
+        
+        # Initialize cache structures if they don't exist
+        if not hasattr(self, '_preview_cache_lock'):
+            self._preview_cache_lock = threading.RLock()
+            
+        # Thread-safe cache operations
+        with self._preview_cache_lock:
+            # Initialize cache if it doesn't exist (with LRU behavior to limit memory usage)
+            if not hasattr(self, '_preview_cache'):
+                # Use OrderedDict for efficient LRU cache behavior
+                self._preview_cache = collections.OrderedDict()
+                self._preview_cache_max_size = 200  # Limit cache size to avoid memory issues
+            
+            # Check if we've already generated this thumbnail
+            if cache_key in self._preview_cache:
+                # Move item to the end to mark as recently used
+                value = self._preview_cache.pop(cache_key)
+                self._preview_cache[cache_key] = value
+                return value
+                
+            # PERFORMANCE OPTIMIZATION: Limit cache size with LRU eviction policy
+            # When the cache gets full, remove the oldest (least recently used) items first
+            if len(self._preview_cache) >= self._preview_cache_max_size:
+                # Remove oldest item (first item in OrderedDict)
+                self._preview_cache.popitem(last=False)
+        
         # Check the file extension
         file_ext = os.path.splitext(file_path)[1].lower()
         
-        # OPTIMIZATION: Enhanced LRU cache for thumbnails using multithreading
-        cache_key = f"{file_path}_{max_width}_{max_height}"
-        
-        # Ensure cache structures are initialized (thread-safe)
-        if not hasattr(self, 'preview_cache'):
-            self.preview_cache = {}
-            
-        if not hasattr(self, 'preview_cache_keys'):
-            self.preview_cache_keys = []
-        
-        if not hasattr(self, 'preview_cache_lock'):
-            self.preview_cache_lock = threading.RLock()
-            
-        # Check if we have the preview in cache (thread-safe)
-        with self.preview_cache_lock:
-            if cache_key in self.preview_cache:
-                # Update LRU order (move to end of list to mark as recently used)
-                if cache_key in self.preview_cache_keys:
-                    self.preview_cache_keys.remove(cache_key)
-                
-                # Add to end (most recently used position)
-                self.preview_cache_keys.append(cache_key)
-                return self.preview_cache[cache_key]
-            
-        # Enforce max cache size with LRU eviction policy
-        if len(self.preview_cache) >= self.max_preview_cache_size:
-            # Remove 20% of least recently used entries
-            items_to_remove = max(1, int(self.max_preview_cache_size * 0.2))
-            
-            # Remove from the beginning of the list (least recently used)
-            for _ in range(min(items_to_remove, len(self.preview_cache_keys))):
-                if self.preview_cache_keys:
-                    oldest_key = self.preview_cache_keys.pop(0)  # Remove and return first item
-                    if oldest_key in self.preview_cache:
-                        del self.preview_cache[oldest_key]
-                        
-            # Log cache cleanup for debugging
-            logging.info(f"LRU cache cleanup: removed {items_to_remove} cached thumbnails")
-            
         preview_image = None
         
         try:
@@ -4120,22 +4217,20 @@ class FileManagerApp:
             draw.text((max_width//2, max_height//2 - 10), "!", fill="white", anchor="mm")
             preview_image = ImageTk.PhotoImage(img)
             
-        # If we got a preview, cache it with LRU tracking
+        # If we got a preview, cache it for future use
         if preview_image:
             try:
-                # Store in cache
-                self.preview_cache[cache_key] = preview_image
+                # Store in cache (thread-safe operation)
+                with self._preview_cache_lock:
+                    self._preview_cache[cache_key] = preview_image
                 
-                # Update LRU tracking list
-                if cache_key in self.preview_cache_keys:
-                    self.preview_cache_keys.remove(cache_key)
+                # Let OrderedDict handle the LRU order
+                # No need for manual tracking
                     
-                # Add to end (most recently used position)
-                self.preview_cache_keys.append(cache_key)
-                
+
                 # Debug log
-                if len(self.preview_cache) % 100 == 0:
-                    logging.info(f"Preview cache size: {len(self.preview_cache)} items")
+                if len(self._preview_cache) % 100 == 0:
+                    logging.info(f"Preview cache size: {len(self._preview_cache)} items")
             except Exception as e:
                 logging.error(f"Error updating preview cache: {str(e)}")
             
@@ -4406,8 +4501,8 @@ class FileManagerApp:
         if self.status_var.get() == self.get_text("ready") or self.status_var.get() == "Ready":
             self.update_status(self.get_text("ready"))
             
-        # Update the folder path display
-        if not self.selected_folder_path:
+        # Update the folder path display if it's not set
+        if self.folder_path_var.get() == self.get_text("no_folder_selected") or self.folder_path_var.get() == "No folder selected":
             self.folder_path_var.set(self.get_text("no_folder_selected"))
             
         # Force a redraw
@@ -4568,12 +4663,12 @@ class FileManagerApp:
                 
                 folder_count += 1
                 
-                # OPTIMIZATION: Parallel processing to calculate file sizes for faster sorting
-                # This provides much faster feedback to the user for large directories
+                # PERFORMANCE OPTIMIZATION: Parallel processing to calculate file sizes for faster sorting
+                # For large directories, we now use ProcessPoolExecutor to bypass GIL and utilize multiple CPU cores
                 try:
                     files_with_sizes = []
                     
-                    # Distribute work across multiple cores using a thread pool
+                    # Distribute work across multiple cores 
                     def get_file_size(file):
                         if self.cancel_flag:
                             return None
@@ -4584,20 +4679,55 @@ class FileManagerApp:
                         except:
                             return (file, 0)
                     
-                    # Use ThreadPoolExecutor for parallelism with a reasonable number of workers
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
-                        # Submit all files for processing
-                        future_to_file = {executor.submit(get_file_size, file): file for file in files}
+                    # PERFORMANCE BOOST: Use ProcessPoolExecutor for CPU-bound tasks when file count is large
+                    # This bypasses Python's GIL (Global Interpreter Lock) allowing true parallelism
+                    if len(files) > 500:  # For large file lists, the overhead of creating processes is worth it
+                        # Optimize worker count based on available CPU cores
+                        cpu_count = multiprocessing.cpu_count()
+                        process_count = max(4, min(cpu_count, 16))  # Use between 4 and 16 processes
                         
-                        # Collect results as they complete
-                        for future in concurrent.futures.as_completed(future_to_file):
-                            if self.cancel_flag:
-                                executor.shutdown(wait=False)
-                                return self.handle_cancellation()
+                        with concurrent.futures.ProcessPoolExecutor(max_workers=process_count) as executor:
+                            # We need to modify our approach for ProcessPoolExecutor to work with file paths
+                            # Create full file paths to pass to executor
+                            file_paths = [(file, os.path.join(root, file)) for file in files]
                             
-                            result = future.result()
-                            if result is not None:
-                                files_with_sizes.append(result)
+                            # Define a worker-friendly function that doesn't rely on self
+                            def get_size_process(file_tuple):
+                                filename, filepath = file_tuple
+                                try:
+                                    size = os.path.getsize(filepath)
+                                    return (filename, size)
+                                except:
+                                    return (filename, 0)
+                            
+                            # Submit all files for processing
+                            future_to_file = {executor.submit(get_size_process, file_tuple): file_tuple[0] 
+                                            for file_tuple in file_paths}
+                            
+                            # Collect results as they complete
+                            for future in concurrent.futures.as_completed(future_to_file):
+                                if self.cancel_flag:
+                                    executor.shutdown(wait=False)
+                                    return self.handle_cancellation()
+                                
+                                result = future.result()
+                                if result is not None:
+                                    files_with_sizes.append(result)
+                    else:
+                        # For smaller file lists, thread pool is more efficient due to lower overhead
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+                            # Submit all files for processing
+                            future_to_file = {executor.submit(get_file_size, file): file for file in files}
+                            
+                            # Collect results as they complete
+                            for future in concurrent.futures.as_completed(future_to_file):
+                                if self.cancel_flag:
+                                    executor.shutdown(wait=False)
+                                    return self.handle_cancellation()
+                                
+                                result = future.result()
+                                if result is not None:
+                                    files_with_sizes.append(result)
                 except Exception as file_e:
                     logging.warning(f"Error getting file size: {str(file_e)}")
                     # Skip this file from the sorting process
@@ -6485,6 +6615,31 @@ if __name__ == "__main__":
                 self.get_text("download_error"),
                 self.get_text("download_error_message").format(str(e))
             )
+    def get_app_data_dir(self):
+        """
+        Uygulama verilerinin kaydedileceği dizini belirler.
+        EXE paketlenmiş sürüm için çalışma dizinini, script modu için script dizinini kullanır.
+        """
+        # Önce script yolunu belirle
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Çalışma dizini - Log dosyasının olduğu yer, EXE paketli sürüm için burası önemli
+        working_dir = os.getcwd()
+        
+        # Log dosyasının konumunu kontrol et
+        log_path = os.path.join(working_dir, "ListeKolay.log")
+        log_exists_in_working_dir = os.path.exists(log_path)
+        
+        # Eğer log dosyası çalışma dizinindeyse (exe ile çalıştırma durumu),
+        # config dosyasını da buraya kaydet
+        if log_exists_in_working_dir:
+            logging.info(f"Log dosyası çalışma dizininde bulundu, config buraya kaydedilecek: {working_dir}")
+            return working_dir
+            
+        # Aksi halde script dizinine kaydet (geliştirme modu)
+        logging.info(f"Script dizinine config kaydedilecek: {script_dir}")
+        return script_dir
+    
     def save_config(self):
         """Kullanıcı ayarlarını config.json dosyasına kaydet"""
         try:
@@ -6504,21 +6659,34 @@ if __name__ == "__main__":
                 "is_dark_mode": self.is_dark_mode.get()
             }
             
-            # Config dosyasını oluştur
-            config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+            # Config dosyası için uygun dizini belirle (exe veya script modu)
+            app_data_dir = self.get_app_data_dir()
+            config_path = os.path.join(app_data_dir, "config.json")
             
             # Config dosyasının bir yedeğini oluştur (kaydetmeden önce)
             try:
-                backup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json.bak")
+                backup_path = os.path.join(app_data_dir, "config.json.bak")
                 if os.path.exists(config_path):
                     shutil.copy2(config_path, backup_path)
-                    logging.info("Config dosyası yedeklendi")
+                    logging.info(f"Config dosyası yedeklendi: {backup_path}")
             except Exception as backup_error:
                 logging.error(f"Config dosyası yedeklenirken hata oluştu: {str(backup_error)}")
+            
+            # Dizine yazma erişimi kontrolü
+            if not os.access(app_data_dir, os.W_OK):
+                logging.warning(f"Dizine yazma erişimi yok: {app_data_dir}")
+                # Son çare olarak geçici dosyalar dizinine yaz
+                import tempfile
+                temp_dir = tempfile.gettempdir()
+                config_path = os.path.join(temp_dir, "config.json")
+                logging.info(f"Alternatif olarak geçici dizine yazılıyor: {config_path}")
             
             # Asıl kayıt işlemi
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=4, ensure_ascii=False)
+                
+            # Oluşturulan config dosyasının konumunu logla
+            logging.info(f"Config dosyası şuraya kaydedildi: {config_path}")
                 
             logging.info("Ayarlar başarıyla kaydedildi")
         except Exception as e:
@@ -6556,18 +6724,52 @@ if __name__ == "__main__":
     def load_config(self):
         """config.json dosyasından kullanıcı ayarlarını yükle"""
         try:
-            config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+            # Önce uygulama veri dizinini belirle 
+            # (EXE için log dosyasıyla aynı dizin, geliştirme için script dizini)
+            app_data_dir = self.get_app_data_dir()
+            config_path = os.path.join(app_data_dir, "config.json")
             
-            # Dosya yoksa oluştur ve varsayılan ayarlarla devam et
+            logging.info(f"Config dosyası aranıyor: {config_path}")
+            
+            # Config dosyası yoksa oluştur
             if not os.path.exists(config_path):
                 logging.info("Yapılandırma dosyası bulunamadı, varsayılan ayarlarla oluşturuluyor")
+                # Config dosyası oluşturulurken uygulama veri dizininin kullanılmasını sağlar
                 self.save_config()  # Varsayılan ayarlarla config.json dosyası oluştur
-                return
                 
+                # Dosyanın oluşturulup oluşturulmadığını kontrol et
+                if os.path.exists(config_path):
+                    logging.info(f"Yeni config dosyası başarıyla oluşturuldu: {config_path}")
+                else:
+                    logging.warning(f"Config dosyası oluşturulamadı: {config_path}")
+                    # Geçici dizinde bir kez daha dene
+                    import tempfile
+                    temp_dir = tempfile.gettempdir()
+                    alt_config_path = os.path.join(temp_dir, "config.json")
+                    logging.info(f"Alternatif config konumu deneniyor: {alt_config_path}")
+                    if os.path.exists(alt_config_path):
+                        config_path = alt_config_path
+                    else:
+                        logging.error("Hiçbir config dosyası bulunamadı, varsayılan ayarlar kullanılacak")
+                        return
+                
+            # Config dosyasını oku
+            logging.info(f"Config dosyası okunuyor: {config_path}")
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
+                logging.info("Config dosyası başarıyla okundu")
             
-            # Dil ayarı
+            # ÖNEMLİ: Tema modunu önce ayarla, böylece diğer ayarlar tema üzerine uygulanır
+            # Tema modu (açık/koyu)
+            has_theme_setting = False
+            if "is_dark_mode" in config:
+                has_theme_setting = True
+                self.is_dark_mode.set(config["is_dark_mode"])
+                # Tema modunu hemen uygula
+                self.toggle_theme_mode()
+                logging.info(f"Tema modu yüklendi: {'Koyu' if config['is_dark_mode'] else 'Açık'}")
+
+            # Dil ayarı - Temadan sonra yapılması önemli
             if "language" in config and config["language"] in self.languages:
                 saved_language = config["language"]
                 self.current_language = saved_language
@@ -6580,6 +6782,12 @@ if __name__ == "__main__":
                 self.update_main_titles()
                 # Kategorileri güncelle
                 self.populate_categories()
+                
+                # Dil değişikliğinden sonra tema değişikliği uygulandıysa
+                # butonların doğru renklenmesi için ikinci kez tema uygula
+                if has_theme_setting:
+                    # Kısa bir gecikme ekleyerek önce dil değişikliğinin uygulanmasını sağla
+                    self.root.after(100, self._force_theme_update)
                 
             # Son klasör artık config'den yüklenmiyor - açılışta boş kalacak
             # Kullanıcının klasör seçmesi bekleniyor
@@ -6611,13 +6819,6 @@ if __name__ == "__main__":
             # Sıralama kriteri
             if "sort_criteria" in config:
                 self.selected_sort.set(config["sort_criteria"])
-                
-            # Tema modu (açık/koyu)
-            if "is_dark_mode" in config:
-                self.is_dark_mode.set(config["is_dark_mode"])
-                # Tema modunu hemen uygula
-                self.toggle_theme_mode()
-                logging.info(f"Tema modu yüklendi: {'Koyu' if config['is_dark_mode'] else 'Açık'}")
                 
             # Görünüm modu her zaman list modunda başlasın
             # view_mode artık config'den yüklenmiyor
