@@ -73,7 +73,7 @@ Hazır Windows çalıştırılabilir sürüm için [Releases](https://github.com
 
 ## 📁 Version / Sürüm
 
-`5.1.1`
+`5.2.0
 
 ---
 
