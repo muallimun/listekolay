@@ -1,4 +1,4 @@
-# ListeKolay - EasyLister for windows & Linux
+# ListeKolay - EasyLister (for windows & Linux)
 
 **ListeKolay** / **EasyLister** is a multilingual desktop utility that helps you generate organized and filtered file lists from any folder on your computer. It offers a user-friendly and modern interface with powerful filtering and preview features.
 
