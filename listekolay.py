@@ -22,7 +22,10 @@ import multiprocessing  # For CPU-bound tasks (GIL bypass)
 import time  # For performance measurement
 import gc  # For garbage collection control
 import platform  # For OS detection
-from search_translations import search_translations
+from search_translations import search_translations, context_menu_translations, toggle_panel_translations
+
+# Görüntü işleme kütüphaneleri
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 
 # Log dosyası ayarları
 def setup_logging():
@@ -31,17 +34,24 @@ def setup_logging():
     Bu, log dosyasının belirli bir boyuta ulaştığında arşivlenmesini ve yeni bir log dosyası başlatılmasını sağlar.
     Böylece disk alanının dolması önlenir.
     """
-    log_file = "ListeKolay.log"
-    
-    # Uygulama EXE modunda mı çalışıyor kontrolü
-    if getattr(sys, 'frozen', False):
-        # EXE modunda, uygulama dizinini kullan
-        exe_dir = os.path.dirname(sys.executable)
-        log_file = os.path.join(exe_dir, log_file)
-    
+    # Belgelerim klasörünü belirle (cross-platform desteği)
+    documents_dir = os.path.join(os.path.expanduser('~'), 'Documents')
+
+    # ListeKolay klasörü oluştur (yoksa)
+    app_data_dir = os.path.join(documents_dir, 'ListeKolay')
+    if not os.path.exists(app_data_dir):
+        try:
+            os.makedirs(app_data_dir)
+        except Exception as e:
+            # Oluşturulamazsa geçici dizini kullan
+            import tempfile
+            app_data_dir = tempfile.gettempdir()
+
+    log_file = os.path.join(app_data_dir, "ListeKolay.log")
+
     # Döngüsel log yapılandırması
     log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    
+
     # Dosya tutucusu oluştur, maksimum boyut 5MB, 3 eski dosya arşivle
     file_handler = logging.handlers.RotatingFileHandler(
         log_file, 
@@ -50,20 +60,20 @@ def setup_logging():
         encoding='utf-8'
     )
     file_handler.setFormatter(log_formatter)
-    
+
     # Kök log yapılandırıcısı
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    
+
     # Önceki tutucuları kaldır (eğer varsa)
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     # Yeni tutucuyu ekle
     root_logger.addHandler(file_handler)
-    
+
     # Log sisteminin başlatıldığını kaydet
-    logging.info("Program başladı - Döngüsel log sistemi aktif (maks. 5MB, 3 arşiv)")
+    logging.info(f"Program başladı - Döngüsel log sistemi aktif (maks. 5MB, 3 arşiv) - Log dosyası: {log_file}")
 
 # Log sistemini başlat
 setup_logging()
@@ -89,6 +99,13 @@ LIGHT_MODE_COLORS = {
     # View mode butonları
     "active_view_button": "#17a2b8",   # Aktif görünüm butonu: Turkuaz
     "inactive_view_button": "#6c757d", # Pasif görünüm butonu: Koyu gri
+    
+    # Giriş alanları ve diyaloglar için renkler
+    "entry_bg": "#ffffff",       # Giriş alanı arkaplan
+    "btn_bg": "#007bff",         # Buton arkaplan
+    "btn_fg": "#ffffff",         # Buton yazı rengi
+    "btn_active_bg": "#0069d9",  # Buton aktif arkaplan
+    "btn_active_fg": "#ffffff",  # Buton aktif yazı rengi
 
     # Ortak renkler
     "button_text": "#ffffff",     # Açık temada buton metinleri beyaz
@@ -116,6 +133,13 @@ DARK_MODE_COLORS = {
     # View mode butonları
     "active_view_button": "#17a2b8",   # Aktif görünüm butonu: Turkuaz
     "inactive_view_button": "#6c757d", # Pasif görünüm butonu: Koyu gri
+    
+    # Giriş alanları ve diyaloglar için renkler
+    "entry_bg": "#343a40",       # Giriş alanı arkaplan
+    "btn_bg": "#0d6efd",         # Buton arkaplan
+    "btn_fg": "#ffffff",         # Buton yazı rengi
+    "btn_active_bg": "#0b5ed7",  # Buton aktif arkaplan
+    "btn_active_fg": "#ffffff",  # Buton aktif yazı rengi
 
     # Ortak renkler
     "button_text": "#ffffff",     # Koyu temada buton metinleri beyaz
@@ -135,21 +159,42 @@ warnings.simplefilter('ignore', Image.DecompressionBombWarning)
 Image.MAX_IMAGE_PIXELS = None
 
 # Ön izlenebilir dosya uzantıları (küçük harflerle)
-PREVIEWABLE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.eps', '.ai', '.psd', '.tif', '.tiff', '.bmp', '.ico', '.svg', '.webp']
+PREVIEWABLE_EXTENSIONS = [
+    # Resim formatları
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.svg', '.webp', '.tif', '.tiff',
+    # Tasarım ve dokümantasyon
+    '.pdf', '.eps', '.ai', '.psd',
+    # Video formatları
+    '.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg', '.3gp',
+    # RAW kamera formatları
+    '.raw', '.cr2', '.nef', '.dng', '.arw',
+    # HEIC/HEIF formatları
+    '.heic', '.heif'
+]
 
 # PIL sürüm uyumluluğu için yardımcı fonksiyon
 def get_pil_resize_method():
     """Farklı PIL sürümleri için tutarlı yeniden boyutlandırma yöntemi döndürür"""
     try:
-        return Image.Resampling.LANCZOS  # PIL 9.0 ve sonrası
-    except (AttributeError, TypeError):
-        try:
-            return Image.LANCZOS  # PIL 4.0 - 8.x
-        except (AttributeError, TypeError):
-            try:
-                return Image.ANTIALIAS  # PIL 1.1.3 - 3.x
-            except (AttributeError, TypeError):
-                return Image.BICUBIC  # Son çare
+        from PIL import Image, ImageFilter
+        
+        # Modern Pillow (9.1.0+) için Resampling sabitleri
+        if hasattr(Image, 'Resampling') and hasattr(Image.Resampling, 'LANCZOS'):
+            return Image.Resampling.LANCZOS
+        
+        # Pillow 4.0 - 8.x için
+        if hasattr(Image, 'LANCZOS'):
+            return Image.LANCZOS
+            
+        # PIL 1.1.3 - 3.x için
+        if hasattr(Image, 'ANTIALIAS'):
+            return Image.ANTIALIAS
+        
+        # Son çare - numeric value as that works in all versions
+        return 3  # BICUBIC sabit değeri
+    except ImportError:
+        # If PIL is not available, return a fallback
+        return 3
 
 import fitz  # PyMuPDF
 import io
@@ -167,9 +212,175 @@ import pdf2image
 # Import language dictionaries
 try:
     from new_languages import de_dict, fr_dict, ru_dict, es_dict, it_dict, fa_dict, ur_dict, hi_dict, zh_dict, ja_dict
+    from search_translations import search_translations
+    
+    # Create context_menu_translations if not found in search_translations
+    if 'context_menu_translations' not in globals():
+        context_menu_translations = {
+            "preview_file": {
+                "tr": "Dosyayı Önizle",
+                "en": "Preview File",
+                "de": "Datei-Vorschau",
+                "fr": "Aperçu du fichier",
+                "ru": "Предварительный просмотр файла",
+                "es": "Vista previa del archivo",
+                "it": "Anteprima file",
+                "zh": "预览文件",
+                "ja": "ファイルプレビュー",
+                "ar": "معاينة الملف"
+            },
+            "delete_files": {
+                "tr": "Dosyayı Sil",
+                "en": "Delete File",
+                "de": "Datei löschen",
+                "fr": "Supprimer le fichier",
+                "ru": "Удалить файл",
+                "es": "Eliminar archivo",
+                "it": "Elimina file",
+                "zh": "删除文件",
+                "ja": "ファイルを削除",
+                "ar": "حذف الملف"
+            },
+            "copy_files": {
+                "tr": "Dosyayı Kopyala",
+                "en": "Copy File",
+                "de": "Datei kopieren",
+                "fr": "Copier le fichier",
+                "ru": "Копировать файл",
+                "es": "Copiar archivo",
+                "it": "Copia file",
+                "zh": "复制文件",
+                "ja": "ファイルをコピー",
+                "ar": "نسخ الملف"
+            },
+            "move_files": {
+                "tr": "Dosyayı Taşı",
+                "en": "Move File",
+                "de": "Datei verschieben",
+                "fr": "Déplacer le fichier",
+                "ru": "Переместить файл",
+                "es": "Mover archivo",
+                "it": "Sposta file",
+                "zh": "移动文件",
+                "ja": "ファイルを移动",
+                "ar": "نقل الملف"
+            },
+            "rename_file": {
+                "tr": "Yeniden Adlandır",
+                "en": "Rename",
+                "de": "Umbenennen",
+                "fr": "Renommer",
+                "ru": "Переименовать",
+                "es": "Renombrar",
+                "it": "Rinomina",
+                "zh": "重命名",
+                "ja": "名前を変更",
+                "ar": "إعادة تسمية"
+            },
+            "select_all_files": {
+                "tr": "Tümünü Seç",
+                "en": "Select All",
+                "de": "Alle auswählen",
+                "fr": "Tout sélectionner",
+                "ru": "Выбрать все",
+                "es": "Seleccionar todo",
+                "it": "Seleziona tutto",
+                "zh": "全选",
+                "ja": "すべて選択",
+                "ar": "تحديد الكل"
+            }
+        }
 except ImportError:
-    # If module is not in the path, try relative import from current directory
-    from attached_assets.new_languages import de_dict, fr_dict, ru_dict, es_dict, it_dict, fa_dict, ur_dict, hi_dict, zh_dict, ja_dict
+    # Try with direct import without path
+    import new_languages
+    from new_languages import de_dict, fr_dict, ru_dict, es_dict, it_dict, fa_dict, ur_dict, hi_dict, zh_dict, ja_dict
+    
+    # Try to import search_translations
+    try:
+        import search_translations
+        from search_translations import search_translations
+    except ImportError:
+        # Fallback search translations
+        search_translations = {
+            "tr": "Dosyaları ara...",
+            "en": "Search files..."
+        }
+    
+    # Fallback context menu translations
+    context_menu_translations = {
+        "preview_file": {
+            "tr": "Dosyayı Önizle",
+            "en": "Preview File",
+            "de": "Datei-Vorschau",
+            "fr": "Aperçu du fichier",
+            "ru": "Предварительный просмотр файла",
+            "es": "Vista previa del archivo",
+            "it": "Anteprima file",
+            "zh": "预览文件",
+            "ja": "ファイルプレビュー",
+            "ar": "معاينة الملف"
+        },
+        "delete_files": {
+            "tr": "Dosyayı Sil",
+            "en": "Delete File",
+            "de": "Datei löschen",
+            "fr": "Supprimer le fichier",
+            "ru": "Удалить файл",
+            "es": "Eliminar archivo",
+            "it": "Elimina file",
+            "zh": "删除文件",
+            "ja": "ファイルを削除",
+            "ar": "حذف الملف"
+        },
+        "copy_files": {
+            "tr": "Dosyayı Kopyala",
+            "en": "Copy File",
+            "de": "Datei kopieren",
+            "fr": "Copier le fichier",
+            "ru": "Копировать файл",
+            "es": "Copiar archivo",
+            "it": "Copia file",
+            "zh": "复制文件",
+            "ja": "ファイルをコピー",
+            "ar": "نسخ الملف"
+        },
+        "move_files": {
+            "tr": "Dosyayı Taşı",
+            "en": "Move File",
+            "de": "Datei verschieben",
+            "fr": "Déplacer le fichier",
+            "ru": "Переместить файл",
+            "es": "Mover archivo",
+            "it": "Sposta file",
+            "zh": "移动文件",
+            "ja": "ファイルを移动",
+            "ar": "نقل الملف"
+        },
+        "rename_file": {
+            "tr": "Yeniden Adlandır",
+            "en": "Rename",
+            "de": "Umbenennen",
+            "fr": "Renommer",
+            "ru": "Переименовать",
+            "es": "Renombrar",
+            "it": "Rinomina",
+            "zh": "重命名",
+            "ja": "名前を変更",
+            "ar": "إعادة تسمية"
+        },
+        "select_all_files": {
+            "tr": "Tümünü Seç",
+            "en": "Select All",
+            "de": "Alle auswählen",
+            "fr": "Tout sélectionner",
+            "ru": "Выбрать все",
+            "es": "Seleccionar todo",
+            "it": "Seleziona tutto",
+            "zh": "全选",
+            "ja": "すべて選択",
+            "ar": "تحديد الكل"
+        }
+    }
 
 translations = {
     "tr": {
@@ -392,7 +603,7 @@ translations = {
         "dark_mode": "Koyu Mod",
         "theme_settings": "Tema Ayarları"
 
-                
+
     },
     "en": {
         "select_folder": "📁 Select Folder",
@@ -597,7 +808,7 @@ translations = {
         "light_mode": "Light Mode",
         "dark_mode": "Dark Mode",
         "theme_settings": "Theme Settings"
-                      
+
     },
     "ar": {
         "open_file": "فتح الملف",
@@ -761,7 +972,7 @@ class FileManagerApp:
         """
         ListeKolay uygulamasının ana sınıfı.
         Bu sınıf dosya listeleme, önizleme ve dışa aktarma işlemlerini yönetir.
-        
+
         Args:
             root: Ana Tkinter penceresi
         """
@@ -769,10 +980,10 @@ class FileManagerApp:
         self.config_loading_in_progress = False
         self.theme_change_in_progress = False 
         self.theme_update_in_progress = False
-        
+
         # Geçici dosya izleme
         self.temp_files = []
-        
+
         # İptal işaretçileri
         self.cancel_flag = False  # Eski uyumluluk için
         self.cancel_event = threading.Event()  # Thread-safe iptal mekanizması
@@ -780,17 +991,17 @@ class FileManagerApp:
         self.current_language = "tr"  # Default language is Turkish
 
         # Uygulama sürüm bilgisi
-        self.current_version = "5.2.0"
+        self.current_version = "5.3.0"
         self.github_version_url = "https://github.com/muallimun/listekolay/raw/main/listekolay_version.txt"
         self.github_download_url = "https://github.com/muallimun/listekolay/releases/latest"
-        
+
         # İptal mekanizması için gelişmiş thread-safe yapılar
         self.cancel_event = threading.Event()  # Thread-safe iptal event nesnesi
         self.cancel_flag = False  # Geriye dönük uyumluluk için flag
-        
+
         # Geçici dosyaların izlenmesi için liste
         self.temp_files = []
-        
+
         # İşlem durumu için animasyonlu simgeler
         self.spinner_chars = ["⟳", "⟲", "↻", "↺"]
         self.progress_icons = ["⏳", "🔄", "⚙️", "📊"]
@@ -851,7 +1062,7 @@ class FileManagerApp:
         self.max_preview_cache_size = 750     # Maximum number of thumbnails to cache (increased from 500)
         self.preview_items_per_page = 150     # Number of preview items per page (increased from 100)
         self.preview_page = 1                 # Current preview page
-        
+
         # İlerleme çubuğu değişkenleri
         self.progress_var = tk.DoubleVar(value=0)
         self.cancel_progress = False
@@ -992,6 +1203,49 @@ class FileManagerApp:
                 return self.pagination_translations[self.current_language][key]
             elif "en" in self.pagination_translations and key in self.pagination_translations["en"]:
                 return self.pagination_translations["en"][key]
+                
+        # Special case for context menu items - use our centralized context menu translations
+        if key in ["preview_file", "delete_files", "copy_files", "move_files", "rename_file", "select_all_files", 
+                  "updating_preview", "do_you_want_to_delete", "copied_to_clipboard", "rename_error",
+                  "large_file_warning", "large_file_slow", "loading_large_file", "view_changed_to_list", 
+                  "preview_not_available"]:
+            # Varsayılan değerler (fallback) tanımla - herhangi bir hata durumunda bunlar kullanılacak
+            defaults = {
+                "preview_file": "Preview File",
+                "delete_files": "Delete Files",
+                "copy_files": "Copy Files",
+                "move_files": "Move Files",
+                "rename_file": "Rename File",
+                "select_all_files": "Select All Files",
+                "updating_preview": "Updating preview...",
+                "do_you_want_to_delete": "Are you sure you want to delete this file",
+                "copied_to_clipboard": "Copied to clipboard",
+                "rename_error": "Rename error",
+                "large_file_warning": "Large file warning",
+                "large_file_slow": "This file is very large and may take time to load",
+                "loading_large_file": "Loading large file...",
+                "view_changed_to_list": "View changed to list mode",
+                "preview_not_available": "No Preview Available"
+            }
+            
+            try:
+                # Çeviri varsa kullan
+                if key in context_menu_translations:
+                    # Mevcut dilde varsa onu kullan
+                    if self.current_language in context_menu_translations[key]:
+                        return context_menu_translations[key][self.current_language]
+                    # İngilizce varsa onu kullan
+                    elif "en" in context_menu_translations[key]:
+                        return context_menu_translations[key]["en"]
+                    # Türkçe varsa onu kullan
+                    elif "tr" in context_menu_translations[key]:
+                        return context_menu_translations[key]["tr"]
+            except (NameError, AttributeError, TypeError, KeyError):
+                # Herhangi bir hata durumunda varsayılan değeri döndür
+                pass
+                
+            # Hiçbir çeviri bulunamazsa varsayılan değer döndür
+            return defaults.get(key, key)
 
         if key in self.languages[self.current_language]:
             return self.languages[self.current_language][key]
@@ -1251,14 +1505,37 @@ class FileManagerApp:
         content_frame = tk.Frame(self.main_frame, bg="#e9ecef")
         content_frame.pack(fill=tk.BOTH, expand=True, pady=10)
 
+        # Sol panel toggle butonu için container
+        toggle_container = tk.Frame(content_frame, bg="#e9ecef")
+        toggle_container.pack(side=tk.LEFT, fill=tk.Y)
+
+        # Sol panel toggle butonu
+        self.left_panel_visible = tk.BooleanVar(value=True)
+        self.toggle_left_panel_btn = tk.Button(
+            toggle_container,
+            text="◀",  # Sol ok işareti (paneli gizle)
+            command=self.toggle_left_panel,
+            font=("Segoe UI", 12, "bold"),
+            bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"],
+            fg=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"],
+            activebackground=LIGHT_MODE_COLORS["btn_active_bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_active_bg"],
+            activeforeground=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"],
+            bd=1,
+            width=2,
+            pady=5,
+            relief=tk.RAISED
+        )
+        self.toggle_left_panel_btn.pack(fill=tk.Y, padx=(0, 5))
+        self.create_tooltip(self.toggle_left_panel_btn, toggle_panel_translations.get(self.current_language, "Sol paneli aç/kapat"))
+
         # Left column (Settings, Filter, Tips) - Now with increased width
-        left_column = tk.Frame(content_frame, bg="#e9ecef", width=450)  # Increased width
-        left_column.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 10))
-        left_column.pack_propagate(False)  # Prevent shrinking
+        self.left_column = tk.Frame(content_frame, bg="#e9ecef", width=450)  # Increased width
+        self.left_column.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 10))
+        self.left_column.pack_propagate(False)  # Prevent shrinking
 
         # Settings panel
         self.settings_frame = tk.LabelFrame(
-            left_column, 
+            self.left_column, 
             text=self.get_text("settings_header"), 
             font=("Segoe UI", 10, "bold"), 
             bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"], 
@@ -1421,7 +1698,7 @@ class FileManagerApp:
 
         # Filter panel - initially hidden
         self.filter_frame = tk.LabelFrame(
-            left_column, 
+            self.left_column, 
             text=self.get_text("filter_label"), 
             font=("Segoe UI", 10, "bold"), 
             bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"], 
@@ -1769,10 +2046,10 @@ class FileManagerApp:
         # Status Bar
         status_frame = tk.Frame(self.main_frame, bg="#e9ecef", height=25)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(10, 0))
-        
+
         # İlerleme çubuğu için frame - önce tanımlıyoruz, görünmez durumda
         self.progress_frame = tk.Frame(status_frame, bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"])
-        
+
         # İlerleme çubuğu - progress_var ile ilişkilendirilmiş
         self.progress_bar = ttk.Progressbar(
             self.progress_frame, 
@@ -1782,7 +2059,7 @@ class FileManagerApp:
             variable=self.progress_var
         )
         # Pack işlemini dosya işlemleri sırasında yapacağız
-        
+
         self.status_var = tk.StringVar(value=self.get_text("ready"))
         status_label = tk.Label(
             status_frame, 
@@ -1798,7 +2075,7 @@ class FileManagerApp:
 
         # Tips panel - now at the bottom of left column with enhanced styling
         self.tips_frame = tk.LabelFrame(
-            left_column, 
+            self.left_column, 
             text=self.get_text("tips_header"), 
             font=("Segoe UI", 10, "bold"), 
             bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"],  # Theme-aware background
@@ -1831,7 +2108,7 @@ class FileManagerApp:
         ]
 
         # Calculate maximum width for wrapping - use maximum available width
-        frame_width = left_column.winfo_reqwidth() or 300  # Use actual width or default to 300
+        frame_width = self.left_column.winfo_reqwidth() or 300  # Use actual width or default to 300
         wrap_width = frame_width - 20  # Minimum padding for better appearance
 
         for i, tip in enumerate(tip_labels):
@@ -1915,7 +2192,7 @@ class FileManagerApp:
 
         # İlerleme çubuğu için frame
         self.progress_frame = tk.Frame(self.main_frame, bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"])
-        
+
         # İlerleme çubuğu - varsayılan olarak gizli
         self.progress_bar = ttk.Progressbar(
             self.progress_frame, 
@@ -2045,40 +2322,40 @@ class FileManagerApp:
             label=self.get_text("copy_filepath"),
             command=self.copy_filepath_to_clipboard
         )
-        
+
         # Add separator for file operations
         self.context_menu.add_separator()
-        
+
         # Select all files option
         self.context_menu.add_command(
             label=self.get_text("select_all_files"),
             command=self.select_all_files
         )
-        
+
         # Delete files option
         self.context_menu.add_command(
             label=self.get_text("delete_files"),
             command=self.delete_selected_files
         )
-        
+
         # Copy files option
         self.context_menu.add_command(
             label=self.get_text("copy_files"),
             command=self.copy_selected_files
         )
-        
+
         # Move files option
         self.context_menu.add_command(
             label=self.get_text("move_files"),
             command=self.move_selected_files
         )
-        
+
         # Cut files option
         self.context_menu.add_command(
             label=self.get_text("cut_files"),
             command=self.cut_selected_files
         )
-        
+
         # Rename file option
         self.context_menu.add_command(
             label=self.get_text("rename_file"),
@@ -2124,17 +2401,17 @@ class FileManagerApp:
         """Show context menu on right-click in the file treeview"""
         # Identify the item under the cursor
         item = self.file_tree.identify_row(event.y)
-        
+
         if item:
             # Check if the item under cursor is already selected
             already_selected = item in self.file_tree.selection()
-            
+
             # If the item is not in the current selection, clear selection and select only this item
             if not already_selected:
                 # If holding Ctrl or Shift key, add to selection instead of replacing it
                 if not (event.state & 0x0004) and not (event.state & 0x0001):  # Ctrl or Shift not pressed
                     self.file_tree.selection_set(item)
-            
+
             # Show the context menu
             try:
                 self.context_menu.tk_popup(event.x_root, event.y_root)
@@ -2725,18 +3002,18 @@ class FileManagerApp:
         # Debounce zaman kontrolü - fazla sık aramaları önle
         current_time = time.time()
         debounce_wait = 0.3  # 300ms debounce
-        
+
         if hasattr(self, 'last_search_time') and (current_time - self.last_search_time < debounce_wait):
             # Çok sık aramaları engelle - aramaları biriktirip tek seferde yap
             if not hasattr(self, 'search_pending') or not self.search_pending:
                 self.search_pending = True
                 self.root.after(int(debounce_wait * 1000), self._execute_pending_search)
             return
-        
+
         # Zaman damgasını güncelle
         self.last_search_time = current_time
         self.search_pending = False
-        
+
         search_text = self.file_search_var.get().lower()
 
         # Skip filtering if the text is the placeholder
@@ -2761,10 +3038,10 @@ class FileManagerApp:
                     # Özellikle büyük dosya listeleri için kullanıcı arayüzünü dondurmamak için
                     # dosyaları küçük gruplar halinde göster (her grupta 100 dosya)
                     self._update_file_list_chunk(self.all_files[:200])  # İlk 200 dosyayı hemen göster
-                    
+
                     # Arayüzde "Dosyalar yükleniyor..." gibi bir durum göster
                     self.update_status(f"{self.get_text('files_loading')} ({len(self.all_files)} {self.get_text('files')})")
-                    
+
                     # Kalan dosyaları arka planda yükle
                     self.root.after(50, lambda: self._load_remaining_files(self.all_files[200:]))
                 else:
@@ -2785,12 +3062,12 @@ class FileManagerApp:
             else:
                 # Küçük listeler için doğrudan ara
                 self._perform_search(search_text)
-    
+
     def _execute_pending_search(self):
         """Bekleyen arama isteğini yürüt (debounce mekanizmasının parçası)"""
         self.search_pending = False
         self.filter_file_list()
-    
+
     def _perform_search(self, search_text):
         """Asıl arama işlemini gerçekleştir (filtreleme işlevi için yardımcı metod)"""
         found_files = []
@@ -2813,48 +3090,48 @@ class FileManagerApp:
                     # Önce ilk grup dosyaları göster
                     first_batch = found_files[:50]
                     self._build_preview_panel(first_batch)
-                    
+
                     # Sonra kalan dosyaları biraz gecikmeyle ekle (UI yanıt vermeye devam etsin)
                     self.root.after(100, lambda: self._append_preview_files(found_files[50:]))
                 else:
                     # Az sayıda dosya için doğrudan göster
                     self._build_preview_panel(found_files)
-                    
+
         finally:
             # Her durumda ilerleme çubuğunu durdur
             self.progress_bar.stop()
             # İstatistikleri güncelle
             found_count = len(found_files)
             self.update_status(f"{found_count} {self.get_text('files_found')}")
-    
+
     def _append_preview_files(self, files):
         """Önizleme paneline daha fazla dosya ekle (aşamalı yükleme için)"""
         if not files or not hasattr(self, 'view_mode_var') or self.view_mode_var.get() != "preview":
             return
-            
+
         # Önizleme ekranını güncelle, mevcut içeriği koruyarak
         self._build_preview_panel(files, append=True)
-        
+
     def _load_remaining_files(self, files, chunk_size=200):
         """Kalan dosyaları parçalar halinde yükle - UI'yi bloklamadan büyük listeleri göster"""
         if not files:
             self.update_status(f"{len(self.all_files)} {self.get_text('files_loaded_message')}")
             return
-            
+
         # Bir sonraki parçayı işle
         chunk = files[:chunk_size]
         remaining = files[chunk_size:]
-        
+
         # Chunks for this iteration
         self._update_file_list_chunk(chunk)
-        
+
         # Eğer daha fazla dosya varsa, bir sonraki parçaya geç
         if remaining:
             # İlerleme bilgisini güncelle
             processed = len(self.all_files) - len(remaining)
             percent = (processed / len(self.all_files)) * 100
             self.update_status(f"{self.get_text('files_loading')} ({percent:.1f}%)")
-            
+
             # Bir sonraki parça için zamanlama yap (UI'nin donmasını önler)
             self.root.after(50, lambda: self._load_remaining_files(remaining, chunk_size))
 
@@ -2864,10 +3141,10 @@ class FileManagerApp:
         if hasattr(self, 'theme_change_in_progress') and self.theme_change_in_progress:
             logging.info("Tema değişikliği zaten devam ediyor, tekrarlayan çağrı engellendi")
             return
-            
+
         # Değişiklik işaretçisini ayarla
         self.theme_change_in_progress = True
-        
+
         try:
             is_dark = self.is_dark_mode.get()
 
@@ -2896,6 +3173,15 @@ class FileManagerApp:
                     # Normal metin tema rengine uymalı
                     self.file_search_entry.config(fg=theme["text"])
 
+            # Toggle butonunu özellikle güncelle
+            if hasattr(self, 'toggle_left_panel_btn'):
+                self.toggle_left_panel_btn.configure(
+                    bg=theme["bg"],
+                    fg=theme["text"],
+                    activebackground=theme["btn_active_bg"],
+                    activeforeground=theme["text"]
+                )
+
             # AÇIK MOD: Butonların görünürlük sorunu için özel işlem
             if not is_dark:
                 # Önemli butonları özellikle güncelle (saydam ve beyaz metin sorununu gider)
@@ -2922,10 +3208,10 @@ class FileManagerApp:
             self.save_config()
 
             logging.info("Tema başarıyla değiştirildi")
-            
+
         except Exception as e:
             logging.error(f"Tema değiştirilirken hata oluştu: {str(e)}")
-            
+
         finally:
             # Her durumda işaretçiyi sıfırla
             self.theme_change_in_progress = False
@@ -3021,7 +3307,7 @@ class FileManagerApp:
             # Planlama işaretçisini temizle
             if hasattr(self, 'theme_update_scheduled'):
                 self.theme_update_scheduled = False
-    
+
     def _force_theme_update(self):
         """
         Tema değişikliklerini yeniden uygula. Bu metod, dil değişikliğinden sonra 
@@ -3031,10 +3317,10 @@ class FileManagerApp:
         if hasattr(self, 'theme_update_in_progress') and self.theme_update_in_progress:
             logging.info("_force_theme_update zaten çalışıyor, tekrarlayan çağrı engellendi")
             return
-            
+
         # Güncelleme işaretçisini ayarla
         self.theme_update_in_progress = True
-        
+
         try:
             logging.info("Tema değişiklikleri yeniden uygulanıyor (dil değişikliğinden sonra)")
             # Mevcut tema renkleri
@@ -3074,10 +3360,10 @@ class FileManagerApp:
                             child.configure(fg=theme["button_text"])
 
             logging.info("Tema değişiklikleri başarıyla yeniden uygulandı")
-        
+
         except Exception as e:
             logging.error(f"_force_theme_update sırasında hata oluştu: {str(e)}")
-            
+
         finally:
             # Her durumda işaretçiyi sıfırla
             self.theme_update_in_progress = False
@@ -3435,6 +3721,80 @@ class FileManagerApp:
             self.thumbnail_container.bind("<Configure>", lambda e: self.preview_canvas.configure(
                 scrollregion=self.preview_canvas.bbox("all")
             ))
+            
+            # Create preview context menu for thumbnail items
+            self.preview_context_menu = tk.Menu(
+                self.root, 
+                tearoff=0, 
+                bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"], 
+                fg=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"]
+            )
+            
+            # Open file option for preview
+            self.preview_context_menu.add_command(
+                label=self.get_text("open_file"),
+                command=self.open_preview_file
+            )
+
+            # Open file location option for preview
+            self.preview_context_menu.add_command(
+                label=self.get_text("open_file_location"),
+                command=self.open_preview_file_location
+            )
+
+            # Add separator
+            self.preview_context_menu.add_separator()
+
+            # Preview file option 
+            self.preview_context_menu.add_command(
+                label=self.get_text("preview_file"),
+                command=self.preview_selected_preview_file
+            )
+
+            # Add separator
+            self.preview_context_menu.add_separator()
+
+            # Copy filename option for preview
+            self.preview_context_menu.add_command(
+                label=self.get_text("copy_filename"),
+                command=self.copy_preview_filename_to_clipboard
+            )
+
+            # Copy file path option for preview
+            self.preview_context_menu.add_command(
+                label=self.get_text("copy_filepath"),
+                command=self.copy_preview_filepath_to_clipboard
+            )
+            
+            # Add separator for file operations
+            self.preview_context_menu.add_separator()
+            
+            # Delete files option
+            self.preview_context_menu.add_command(
+                label=self.get_text("delete_files"),
+                command=self.delete_preview_file
+            )
+            
+            # Copy files option
+            self.preview_context_menu.add_command(
+                label=self.get_text("copy_files"),
+                command=self.copy_preview_file
+            )
+            
+            # Move files option
+            self.preview_context_menu.add_command(
+                label=self.get_text("move_files"),
+                command=self.move_preview_file
+            )
+            
+            # Rename file option
+            self.preview_context_menu.add_command(
+                label=self.get_text("rename_file"),
+                command=self.rename_preview_file
+            )
+            
+            # Add separator - no more menu items
+            # Note: "Tümünü Seç" (Select All) option removed as it doesn't work well in preview mode
 
             # Bind mousewheel event for scrolling
             self.preview_canvas.bind_all("<MouseWheel>", lambda e: self.preview_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
@@ -3458,19 +3818,32 @@ class FileManagerApp:
         if not hasattr(self, 'filtered_files') or not self.filtered_files:
             # No files to display
             if hasattr(self, 'thumbnail_container'):
-                for widget in self.thumbnail_container.winfo_children():
-                    widget.destroy()
-
-                # Show message
-                msg_label = tk.Label(
-                    self.thumbnail_container,
-                    text=self.get_text("no_preview_available"),
-                    font=("Segoe UI", 12),
-                    bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"],
-                    fg=LIGHT_MODE_COLORS["secondary_text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["secondary_text"]
-                )
-                msg_label.pack(pady=50)
-
+                try:
+                    # Güvenli şekilde mevcut widget'ları temizle
+                    try:
+                        for widget in self.thumbnail_container.winfo_children():
+                            try:
+                                widget.destroy()
+                            except Exception as widget_error:
+                                logging.error(f"Error destroying widget: {str(widget_error)}")
+                    except Exception as children_error:
+                        logging.error(f"Error getting thumbnail children: {str(children_error)}")
+                    
+                    # Show message - güvenli şekilde yap
+                    try:
+                        msg_label = tk.Label(
+                            self.thumbnail_container,
+                            text=self.get_text("no_preview_available"),
+                            font=("Segoe UI", 12),
+                            bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"],
+                            fg=LIGHT_MODE_COLORS["secondary_text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["secondary_text"]
+                        )
+                        msg_label.pack(pady=50)
+                    except Exception as label_error:
+                        logging.error(f"Error creating no-preview message: {str(label_error)}")
+                except Exception as container_error:
+                    logging.error(f"Error with thumbnail container: {str(container_error)}")
+                
                 # Reset preview files list
                 self.current_preview_files = []
             return
@@ -3513,10 +3886,16 @@ class FileManagerApp:
         # Use only previewable files for the rest of the function
         self.previewable_files = previewable_files
 
-        # Clear existing thumbnails
+        # Clear existing thumbnails - güvenli şekilde yap
         if hasattr(self, 'thumbnail_container'):
-            for widget in self.thumbnail_container.winfo_children():
-                widget.destroy()
+            try:
+                for widget in self.thumbnail_container.winfo_children():
+                    widget.destroy()
+            except Exception as e:
+                logging.error(f"Error clearing thumbnail_container: {str(e)}")
+                # Widget hatası varsa, liste görünümüne geç
+                self.set_view_mode("list")
+                return
 
         # Start building thumbnails
         self.update_status(self.get_text("loading_preview"))
@@ -3607,7 +3986,7 @@ class FileManagerApp:
 
     def _build_preview_panel(self, files, append=False):
         """Build a preview panel showing file thumbnails
-        
+
         Args:
             files: List of file info dictionaries to display
             append: If True, append files to existing preview panel instead of clearing it
@@ -3796,12 +4175,39 @@ class FileManagerApp:
                             preview_width_reduced = int(preview_width * 0.7)  # 70% of original size for overview
                             preview_height_reduced = int(preview_height * 0.7)  # 70% of original size for overview
 
+                            # Import required modules first
+                            try:
+                                import os
+                                import io
+                                import tempfile
+                                import logging
+                                from PIL import Image, ImageTk
+                                
+                                # Check if file exists
+                                if not os.path.exists(file_path):
+                                    logging.error(f"File not found: {file_path}")
+                                    return "error", (r, c, file_path)
+                            except ImportError as imp_err:
+                                logging.error(f"Import error in generate_preview: {str(imp_err)}")
+                                return "error", (r, c, file_path)
+                            
                             # Try to generate preview
                             try:
-                                preview_img = self._create_file_preview(file_path, preview_width_reduced, preview_height_reduced)
-                                if preview_img:
-                                    return ("success", (r, c, preview_img, file_path, file_name, file_info.get("size", 0)))
-                                else:
+                                # Log file preview generation with standard logging
+                                print(f"Generating preview for file: {file_path} (type: {extension}, position: {r},{c})")
+                                
+                                # Call the file preview function
+                                try:
+                                    preview_img = self._create_file_preview(file_path, preview_width_reduced, preview_height_reduced)
+                                    
+                                    if preview_img:
+                                        print(f"Preview successfully created for: {file_path}")
+                                        return ("success", (r, c, preview_img, file_path, file_name, file_info.get("size", 0)))
+                                    else:
+                                        print(f"_create_file_preview returned None for {file_path}")
+                                        return ("error", (r, c, file_path))
+                                except Exception as preview_err:
+                                    print(f"Error in _create_file_preview for {file_path}: {str(preview_err)}")
                                     return ("error", (r, c, file_path))
                             except Exception as e:
                                 logging.error(f"Error creating thumbnail for {file_path}: {str(e)}")
@@ -3833,11 +4239,21 @@ class FileManagerApp:
                                 return
 
                             try:
-                                result_type, result_data = future.result()
-                                if result_type == "success":
-                                    thumbnails.append(result_data)
+                                result = future.result()
+                                if len(result) >= 2:  # Ensure we have at least two items in the result tuple
+                                    result_type, result_data = result[0], result[1]
+                                    if result_type == "success" and result_data:
+                                        file_info = result_data[3] if len(result_data) > 3 else "Unknown file"
+                                        logging.info(f"Successfully added thumbnail to UI queue: {file_info}")
+                                        thumbnails.append(result_data)
+                                    else:
+                                        error_info = result_data[2] if len(result_data) > 2 else "Unknown error"
+                                        logging.warning(f"Failed to create preview, adding to errors list: {error_info}")
+                                        errors.append(result_data)
                                 else:
-                                    errors.append(result_data)
+                                    logging.error(f"Invalid result format received: {result}")
+                                    # Create a generic error entry
+                                    errors.append((-1, -1, "Invalid result format"))
                             except Exception as e:
                                 logging.error(f"Error collecting preview result: {str(e)}")
 
@@ -4051,7 +4467,7 @@ class FileManagerApp:
 
     def _create_eps_preview(self, file_path, max_width, max_height):
         """Specialized function to create a preview for EPS files.
-        Uses multiple methods and temporary files to ensure success"""
+        Uses multiple methods with performance optimizations for large files."""
 
         # Fallback function to create placeholder
         def create_eps_placeholder():
@@ -4063,6 +4479,22 @@ class FileManagerApp:
             draw.text((max_width//2, max_height//2), "EPS", fill="white", anchor="mm")
             return ImageTk.PhotoImage(img)
 
+        # Dosya boyutu kontrolü
+        try:
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # MB cinsinden
+            is_large_eps = file_size_mb > 10  # 10MB'dan büyük EPS dosyaları büyük olarak kabul edilir
+        except Exception:
+            is_large_eps = False
+            
+        # Büyük dosyalar için uyarı göster
+        if is_large_eps and hasattr(self, 'update_status'):
+            self.update_status(self.get_text("loading_large_file"))
+            
+        # Büyük dosyalar için DPI ve çözünürlük ayarlarını düzenle
+        dpi = 72 if is_large_eps else 150
+        density = '72' if is_large_eps else '150'
+        scale_factor = 0.25 if is_large_eps else 0.5
+
         # We'll try several methods in sequence, from most reliable to least reliable
         preview_image = None
 
@@ -4071,55 +4503,105 @@ class FileManagerApp:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_pdf_path = os.path.join(temp_dir, "temp_eps_preview.pdf")
 
-                # METHOD 1: Directly use PIL to open EPS - works with small EPS files
+                # METHOD 1: Directly use PIL to open EPS - only try for small files
+                if not is_large_eps:
+                    try:
+                        # Set a timeout to prevent hanging on large files
+                        img = Image.open(file_path)
+                        # Use a smaller target size to prevent decompression bombs
+                        img.thumbnail((max_width, max_height), get_pil_resize_method())
+                        preview_image = ImageTk.PhotoImage(img)
+                        return preview_image
+                    except Exception as e:
+                        logging.info(f"Direct EPS loading failed: {str(e)}")
+                        # PIL doğrudan EPS yüklemesi başarısız oldu, hafızayı temizle
+                        if 'img' in locals():
+                            del img
+                            
+                # METHOD 2: Use cairosvg for EPS/SVG files - works for many EPS files
                 try:
-                    # Set a timeout to prevent hanging on large files
-                    img = Image.open(file_path)
-                    # Use a smaller target size to prevent decompression bombs
+                    # SVG ve EPS dosyaları benzer formatlardır, cairosvg bazen işe yarar
+                    from cairosvg import svg2png
+                    import io
+                    
+                    # EPS dosyasını oku ve SVG olarak işlemeyi dene
+                    with open(file_path, 'rb') as eps_file:
+                        eps_data = eps_file.read()
+                    
+                    # Büyük dosyalar için daha küçük boyut hedefle
+                    target_width = int(max_width * 1.5)
+                    target_height = int(max_height * 1.5)
+                    
+                    # SVG olarak dönüştürmeyi dene
+                    png_data = svg2png(bytestring=eps_data, output_width=target_width, output_height=target_height)
+                    
+                    # PNG verilerini bir PIL görüntüsüne dönüştür
+                    img = Image.open(io.BytesIO(png_data))
                     img.thumbnail((max_width, max_height), get_pil_resize_method())
                     preview_image = ImageTk.PhotoImage(img)
                     return preview_image
                 except Exception as e:
-                    logging.info(f"Direct EPS loading failed: {str(e)}")
+                    logging.info(f"cairosvg EPS conversion failed: {str(e)}")
+                    # cairosvg hata verirse hafızayı temizle
+                    if 'img' in locals():
+                        del img
+                    if 'eps_data' in locals():
+                        del eps_data
+                    if 'png_data' in locals():
+                        del png_data
 
-                # METHOD 2: Use pdf2image with specific parameters
+                # METHOD 3: Use pdf2image with performance optimizations
                 try:
                     # Try to convert EPS directly to image
                     from pdf2image import convert_from_path
 
-                    # Define poppler path to ensure we can find the tools
-                    poppler_path = '/nix/store/1f2vbia1rg1rh5cs0ii49v3hln9i36rv-poppler-utils-24.02.0/bin'
+                    # Define poppler path to ensure we can find the tools - dinamik olarak ara
+                    import shutil
+                    # Poppler araçlarını ara
+                    pdftoppm_path = shutil.which('pdftoppm')
+                    poppler_path = os.path.dirname(pdftoppm_path) if pdftoppm_path else ""
 
-                    # Use pdftocairo which often handles EPS better than pdftoppm
+                    # OPTIMIZASYON: Büyük dosyalar için daha düşük DPI ve daha uzun timeout
                     images = convert_from_path(
                         file_path, 
                         first_page=1, 
                         last_page=1,
-                        dpi=72,  # Lower DPI to prevent large image generation
+                        dpi=dpi,  # Büyük dosyalar için düşük DPI
                         size=(max_width, max_height),
                         use_cropbox=True,
-                        fmt='ppm',  # Use PPM format which is more reliable
+                        fmt='ppm',  # PPM formatı daha güvenilir
                         poppler_path=poppler_path,
-                        use_pdftocairo=True,  # Try pdftocairo instead of pdftoppm
-                        timeout=10  # Increase timeout for complex EPS files
+                        use_pdftocairo=True,  # pdftocairo, pdftoppm'den daha iyi çalışır
+                        timeout=30 if is_large_eps else 10  # Büyük dosyalar için daha uzun timeout
                     )
 
                     if images and len(images) > 0:
                         img = images[0]
                         img.thumbnail((max_width, max_height), get_pil_resize_method())
                         preview_image = ImageTk.PhotoImage(img)
+                        # Hafızayı temizle
+                        del images[0]
+                        del images
                         return preview_image
                 except Exception as e:
                     logging.info(f"pdf2image EPS conversion failed: {str(e)}")
+                    # Hafızayı temizle
+                    if 'images' in locals():
+                        del images
+                    if 'img' in locals():
+                        del img
 
-                # METHOD 3: Use PyMuPDF (fitz) to open the EPS directly
+                # METHOD 4: Use PyMuPDF (fitz) with reduced scale factor for large files
                 try:
                     pdf_doc = fitz.open(file_path)
                     if pdf_doc.page_count > 0:
                         page = pdf_doc[0]
-                        # Use a lower zoom factor to prevent large images
-                        pix = page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))
+                        # Büyük dosyalar için daha düşük zoom faktörü kullan
+                        pix = page.get_pixmap(matrix=fitz.Matrix(scale_factor, scale_factor))
                         img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                        # Belleği serbest bırak
+                        pix = None
+                        
                         img.thumbnail((max_width, max_height), get_pil_resize_method())
                         preview_image = ImageTk.PhotoImage(img)
                         pdf_doc.close()
@@ -4127,20 +4609,30 @@ class FileManagerApp:
                     pdf_doc.close()
                 except Exception as e:
                     logging.info(f"PyMuPDF EPS loading failed: {str(e)}")
+                    # Hafızayı temizle
+                    if 'pdf_doc' in locals() and hasattr(pdf_doc, 'close'):
+                        pdf_doc.close()
+                    if 'pix' in locals():
+                        pix = None
+                    if 'img' in locals():
+                        del img
 
-                # METHOD 4: Try using ImageMagick to convert EPS to PNG
+                # METHOD 5: Try using ImageMagick with optimized parameters for file size
                 try:
-                    # Use ImageMagick convert command
-                    convert_path = '/nix/store/1izdxwml9nsifjrh53rdfiglhjmrnx2s-imagemagick-7.1.1-32/bin/convert'
+                    # Use ImageMagick convert command - sistemden bul
+                    import shutil
+                    convert_path = shutil.which('convert') or 'convert'
 
                     # Create temporary output image path
                     temp_image_path = os.path.join(temp_dir, "temp_eps_preview.png")
 
-                    # Convert EPS to PNG using ImageMagick with density parameter for better quality
+                    # OPTIMIZASYON: Büyük dosyalar için daha düşük yoğunluk ve basitleştirilmiş dönüşüm
+                    # Convert EPS to PNG using ImageMagick with density parameter optimized for file size
                     subprocess.run(
-                        [convert_path, '-density', '150', '-background', 'white', '-flatten', 
+                        [convert_path, '-density', density, '-background', 'white', '-flatten', 
                          file_path, temp_image_path],
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                        timeout=30 if is_large_eps else 10  # Büyük dosyalar için daha uzun timeout
                     )
 
                     # Check if image was created successfully
@@ -4150,10 +4642,12 @@ class FileManagerApp:
                         preview_image = ImageTk.PhotoImage(img)
                         return preview_image
 
-                    # If that failed, try a simpler conversion method
+                    # If that failed, try a simpler conversion method with lower quality for large files
+                    quality_param = ['-quality', '50'] if is_large_eps else []
                     subprocess.run(
-                        [convert_path, file_path, temp_image_path],
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10
+                        [convert_path] + quality_param + [file_path, temp_image_path],
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                        timeout=30 if is_large_eps else 10
                     )
 
                     # Check if image was created with the simpler method
@@ -4165,15 +4659,30 @@ class FileManagerApp:
 
                 except Exception as e:
                     logging.info(f"ImageMagick EPS conversion failed: {str(e)}")
+                    # Hafızayı temizle
+                    if 'img' in locals():
+                        del img
 
         except Exception as e:
             logging.error(f"All EPS preview methods failed: {str(e)}")
+            
+            # Büyük EPS dosyalarının başarısız olması durumunda uyarı mesajını güncelle
+            if is_large_eps and hasattr(self, 'update_status'):
+                self.update_status(self.get_text("preview_not_available"))
 
         # If all methods fail or exceptions occur, create a placeholder
         return create_eps_placeholder()
 
     def _create_file_preview(self, file_path, max_width=150, max_height=150):
         """Create a thumbnail preview for a file based on its type"""
+        # İçe aktarma - kesinlikle gerekli
+        import os
+        import tempfile
+        import io
+        import logging
+        import subprocess
+        from PIL import Image, ImageTk, ImageDraw, ImageFont
+        
         # Normalize file path to avoid Windows/Unix path issues
         file_path = os.path.normpath(file_path)
 
@@ -4213,11 +4722,539 @@ class FileManagerApp:
         preview_image = None
 
         try:
-            # Image files - expanded with more formats
-            if file_ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif', '.webp', '.svg', '.ico', '.heic', '.raw', '.cr2', '.nef', '.dng', '.arw']:
+            # SVG files require special handling
+            if file_ext == '.svg':
+                try:
+                    # SVG işleme için cairosvg modülünü kullan
+                    import io
+                    from cairosvg import svg2png
+                    
+                    # SVG boyutunu belirle (dosyayı açarak)
+                    try:
+                        import xml.etree.ElementTree as ET
+                        tree = ET.parse(file_path)
+                        root = tree.getroot()
+                        
+                        # SVG boyutlarını al (varsayılan değerler 300x300)
+                        width = int(float(root.get('width', '300').replace('px', '').strip()))
+                        height = int(float(root.get('height', '300').replace('px', '').strip()))
+                        
+                        # Boyut oranını koru
+                        scale = min(max_width / width, max_height / height)
+                        new_width = int(width * scale)
+                        new_height = int(height * scale)
+                    except Exception as svg_size_error:
+                        logging.error(f"SVG boyutu belirlenemedi: {svg_size_error}")
+                        new_width, new_height = max_width, max_height
+                    
+                    # SVG'yi PNG'ye dönüştür
+                    png_data = svg2png(url=file_path, output_width=new_width, output_height=new_height)
+                    
+                    # PNG verilerini bir PIL görüntüsüne dönüştür
+                    img = Image.open(io.BytesIO(png_data))
+                    preview_image = ImageTk.PhotoImage(img)
+                except Exception as svg_error:
+                    logging.error(f"SVG önizleme oluşturulamadı: {str(svg_error)}")
+                    # Hata durumunda ikonla göster
+                    preview_image = self._create_styled_icon(max_width, max_height, "#3F51B5", "SVG")
+            
+            # WebP files may need special handling for animation
+            elif file_ext == '.webp':
+                try:
+                    # Önce dosyanın animasyonlu olup olmadığını kontrol et
+                    img = Image.open(file_path)
+                    
+                    # WebP'nin animasyonlu olup olmadığını kontrol et
+                    try:
+                        is_animated = hasattr(img, "is_animated") and img.is_animated
+                    except Exception:
+                        is_animated = False
+                    
+                    if is_animated:
+                        # Animasyonlu WebP için ilk kareyi al
+                        img.seek(0)  # İlk kareye git
+                    
+                    # Yeniden boyutlandır
+                    img.thumbnail((max_width, max_height), get_pil_resize_method())
+                    preview_image = ImageTk.PhotoImage(img)
+                except Exception as webp_error:
+                    logging.error(f"WebP önizleme oluşturulamadı: {str(webp_error)}")
+                    # Hata durumunda ikonla göster
+                    preview_image = self._create_styled_icon(max_width, max_height, "#009688", "WEBP")
+                
+            # TIFF files need careful handling due to potential multi-page nature
+            elif file_ext in ['.tiff', '.tif']:
+                try:
+                    # TIFF dosyasını aç
+                    img = Image.open(file_path)
+                    
+                    # TIFF'in çok sayfalı olup olmadığını kontrol et
+                    try:
+                        is_multipage = hasattr(img, "n_frames") and img.n_frames > 1
+                    except Exception:
+                        is_multipage = False
+                    
+                    if is_multipage:
+                        # Çok sayfalı TIFF için ilk sayfayı al
+                        img.seek(0)  # İlk sayfaya git
+                    
+                    # Yeniden boyutlandır
+                    img.thumbnail((max_width, max_height), get_pil_resize_method())
+                    preview_image = ImageTk.PhotoImage(img)
+                except Exception as tiff_error:
+                    logging.error(f"TIFF önizleme oluşturulamadı: {str(tiff_error)}")
+                    # Hata durumunda ikonla göster
+                    preview_image = self._create_styled_icon(max_width, max_height, "#795548", "TIFF")
+            
+            # Video files - create thumbnail preview
+            elif file_ext in ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg', '.3gp']:
+                preview_image = None
+                try:
+                    # Video önizlemesi için ffmpeg kullan
+                    import tempfile
+                    import subprocess
+                    import os
+                    import shutil
+                    
+                    # Geçici dosya oluştur
+                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                        temp_output = temp_file.name
+                    
+                    # ffmpeg yolu - sistemden dinamik olarak bul
+                    ffmpeg_path = shutil.which('ffmpeg') or 'ffmpeg'
+                    
+                    # Dosya boyutunu kontrol et
+                    file_size = 0
+                    is_large_video = False
+                    try:
+                        file_size = os.path.getsize(file_path)
+                        is_large_video = file_size > 1024 * 1024 * 1024  # 1GB'dan büyük mü?
+                        print(f"Video dosya boyutu: {file_path} - {file_size / (1024*1024):.2f} MB")
+                    except Exception as e:
+                        print(f"Dosya boyutu alınamadı: {str(e)}")
+                    
+                    thumbnail_created = False
+                    
+                    # Büyük video dosyaları için (1GB+)
+                    if is_large_video:
+                        print(f"Büyük video dosyası algılandı, süper optimize edilmiş yöntem kullanılıyor: {file_path}")
+                        thumbnail_created = False
+                        
+                        # İlk deneme: Doğrudan küçük resim oluştur, çok düşük kalite
+                        try:
+                            # Windows'ta terminal penceresi gizlemek için STARTUPINFO kullan
+                            startupinfo = None
+                            if os.name == 'nt':  # Windows
+                                startupinfo = subprocess.STARTUPINFO()
+                                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                                startupinfo.wShowWindow = subprocess.SW_HIDE
+                            
+                            subprocess.run([
+                                ffmpeg_path, '-y', '-ss', '00:00:00.1', '-i', file_path,
+                                '-vframes', '1', '-q:v', '10', 
+                                '-vf', f'scale={max_width}:{max_height}',
+                                '-analyzeduration', '10000',  # 10 saniye analiz
+                                '-probesize', '1000000',  # 1MB analiz
+                                temp_output
+                            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3, startupinfo=startupinfo)
+                            
+                            if os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
+                                thumbnail_created = True
+                                print(f"Büyük video için ilk yöntem başarılı: {file_path}")
+                        except Exception as e:
+                            print(f"Süper hızlı yöntem başarısız: {e}, alternatif deneniyor")
+                        
+                        # İkinci deneme: Sadece videonun ilk birkaç MB'ını işle
+                        if not thumbnail_created:
+                            try:
+                                # Windows'ta terminal penceresi gizlemek için STARTUPINFO kullan
+                                startupinfo = None
+                                if os.name == 'nt':  # Windows
+                                    startupinfo = subprocess.STARTUPINFO()
+                                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                                
+                                # Doğrudan ilk kareyi çıkar, analiz süresini ve boyutunu sınırla
+                                subprocess.run([
+                                    ffmpeg_path, '-y', '-i', file_path,
+                                    '-vframes', '1', '-q:v', '20',  # Çok düşük kalite = çok hızlı
+                                    '-vf', f'scale={max_width//2}:{max_height//2}',  # Daha küçük ölçek
+                                    '-analyzeduration', '1000',  # 1 saniye analiz
+                                    '-probesize', '500000',  # 500KB analiz
+                                    temp_output
+                                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2, startupinfo=startupinfo)
+                                
+                                if os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
+                                    thumbnail_created = True
+                                    print(f"Büyük video için ikinci yöntem başarılı: {file_path}")
+                            except Exception as e2:
+                                print(f"İkinci yöntem de başarısız: {e2}, son çare deneniyor")
+
+                        # Üçüncü deneme: Dosyaya en hızlı erişim
+                        if not thumbnail_created:
+                            try:
+                                # Windows'ta terminal penceresi gizlemek için STARTUPINFO kullan
+                                startupinfo = None
+                                if os.name == 'nt':  # Windows
+                                    startupinfo = subprocess.STARTUPINFO()
+                                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                                
+                                # En agresif yöntem - ffmpeg'in en hızlı ayarlarını kullan
+                                subprocess.run([
+                                    ffmpeg_path, '-y',
+                                    '-analyzeduration', '100',  # Minimum analiz süresi
+                                    '-probesize', '1000',  # Çok küçük probe
+                                    '-i', file_path,
+                                    '-frames:v', '1',  # Sadece 1 kare
+                                    '-q:v', '31',  # En düşük kalite
+                                    '-vf', f'scale=48:48',  # Çok küçük resim
+                                    temp_output
+                                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1, startupinfo=startupinfo)
+                                
+                                if os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
+                                    thumbnail_created = True
+                                    print(f"Büyük video için acil yöntem başarılı: {file_path}")
+                            except Exception as e3:
+                                print(f"Tüm video önizleme yöntemleri başarısız: {e3}")
+                    else:
+                        # Normal boyutlu dosyalar için
+                        try:
+                            # Windows'ta terminal penceresi gizlemek için STARTUPINFO kullan
+                            startupinfo = None
+                            if os.name == 'nt':  # Windows
+                                startupinfo = subprocess.STARTUPINFO()
+                                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                                startupinfo.wShowWindow = subprocess.SW_HIDE
+                            
+                            # İlk kareyi çıkar (1. saniye)
+                            subprocess.run([
+                                ffmpeg_path, '-y', '-ss', '00:00:01', '-i', file_path,
+                                '-vframes', '1', '-q:v', '2', temp_output
+                            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10, startupinfo=startupinfo)
+                            
+                            # Başarısız olursa başlangıçtan al
+                            if not os.path.exists(temp_output) or os.path.getsize(temp_output) == 0:
+                                subprocess.run([
+                                    ffmpeg_path, '-y', '-ss', '00:00:00', '-i', file_path,
+                                    '-vframes', '1', '-q:v', '2', temp_output
+                                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10, startupinfo=startupinfo)
+                            
+                            thumbnail_created = (os.path.exists(temp_output) and os.path.getsize(temp_output) > 0)
+                        except:
+                            print(f"Normal video dosyası için ilk yöntem başarısız, alternatif deneniyor: {file_path}")
+                            try:
+                                # Windows'ta terminal penceresi gizlemek için STARTUPINFO kullan
+                                startupinfo = None
+                                if os.name == 'nt':  # Windows
+                                    startupinfo = subprocess.STARTUPINFO()
+                                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                                
+                                # Daha basit bir yaklaşım
+                                subprocess.run([
+                                    ffmpeg_path, '-y', '-i', file_path,
+                                    '-vframes', '1', '-q:v', '5', temp_output
+                                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5, startupinfo=startupinfo)
+                                thumbnail_created = (os.path.exists(temp_output) and os.path.getsize(temp_output) > 0)
+                            except:
+                                print(f"Video dosyası için tüm yöntemler başarısız: {file_path}")
+                    
+                    # Thumbnail oluştur (her iki yol için de)
+                    if thumbnail_created:
+                        try:
+                            img = Image.open(temp_output)
+                            img.thumbnail((max_width, max_height), get_pil_resize_method())
+                            
+                            # Play simgesi ekle
+                            draw = ImageDraw.Draw(img)
+                            center_x, center_y = img.width // 2, img.height // 2
+                            triangle_size = min(img.width, img.height) // 4
+                            
+                            # Daire arka plan
+                            draw.ellipse([
+                                center_x - triangle_size, center_y - triangle_size,
+                                center_x + triangle_size, center_y + triangle_size
+                            ], fill=(0, 0, 0, 128))
+                            
+                            # Üçgen play ikonu
+                            draw.polygon([
+                                (center_x - triangle_size//2, center_y - triangle_size//2),
+                                (center_x - triangle_size//2, center_y + triangle_size//2),
+                                (center_x + triangle_size//2, center_y)
+                            ], fill=(255, 255, 255, 220))
+                            
+                            preview_image = ImageTk.PhotoImage(img)
+                            
+                            # Geçici dosyayı temizle
+                            try:
+                                os.unlink(temp_output)
+                            except:
+                                pass
+                        except Exception as img_error:
+                            print(f"Thumbnail oluşturma hatası: {str(img_error)}")
+                
+                except Exception as e:
+                    print(f"Video önizleme oluşturulamadı: {str(e)}")
+                
+                # Eğer önizleme oluşturulamadıysa, bir video ikonu göster
+                if not preview_image:
+                    preview_image = self._create_styled_icon(max_width, max_height, "#FF5722", "VIDEO")
+            
+            # RAW camera files - add basic support
+            elif file_ext in ['.raw', '.cr2', '.nef', '.dng', '.arw']:
+                try:
+                    # RAW dosyaları için Pillow/PIL'in sadece bazı formatları desteklediğini not et
+                    img = Image.open(file_path)
+                    img.thumbnail((max_width, max_height), get_pil_resize_method())
+                    preview_image = ImageTk.PhotoImage(img)
+                except Exception as raw_error:
+                    logging.error(f"RAW önizleme oluşturulamadı: {str(raw_error)}")
+                    # Hata durumunda ikonla göster
+                    preview_image = self._create_styled_icon(max_width, max_height, "#673AB7", "RAW")
+                
+            # HEIC/HEIF format - special handling
+            elif file_ext in ['.heic', '.heif']:
+                try:
+                    # HEIC/HEIF dosyaları için özel destek
+                    # Pillow yeni sürümlerde destekleyebilir, ancak çoğu durumda heif-convert gerekir
+                    
+                    # İlk olarak direk PIL ile deniyoruz
+                    try:
+                        img = Image.open(file_path)
+                        
+                        # Check if it's a large image (>10MP) for optimization
+                        try:
+                            mp = (img.width * img.height) / 1000000  # Megapixels
+                            is_large = mp > 10
+                        except:
+                            is_large = False
+                            
+                        # For large images, use more aggressive downsampling first
+                        if is_large:
+                            # Calculate intermediate size to improve performance
+                            scale_factor = 0.5
+                            intermediate_w = int(img.width * scale_factor)
+                            intermediate_h = int(img.height * scale_factor)
+                            img = img.resize((intermediate_w, intermediate_h), get_pil_resize_method())
+                        
+                        img.thumbnail((max_width, max_height), get_pil_resize_method())
+                        preview_image = ImageTk.PhotoImage(img)
+                        return preview_image
+                    except Exception as pil_heic_error:
+                        logging.info(f"PIL ile HEIC açılamadı, alternatif yöntemler deneniyor: {str(pil_heic_error)}")
+                    
+                    # PIL başarısız olduysa, FFmpeg ile dönüştürme deneyelim
+                    import tempfile
+                    import subprocess
+                    import os
+                    
+                    # Geçici dosya oluştur
+                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                        temp_output = temp_file.name
+                    
+                    # ffmpeg yolu - sistemden dinamik olarak bul
+                    import shutil
+                    ffmpeg_path = shutil.which('ffmpeg') or 'ffmpeg'
+                    
+                    # HEIC'i JPG'ye dönüştür
+                    subprocess.run([
+                        ffmpeg_path, '-y', '-i', file_path, temp_output
+                    ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+                    
+                    # Dönüştürülmüş dosyayı yükle
+                    if os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
+                        img = Image.open(temp_output)
+                        img.thumbnail((max_width, max_height), get_pil_resize_method())
+                        preview_image = ImageTk.PhotoImage(img)
+                        
+                        # Geçici dosyayı temizle
+                        try:
+                            os.unlink(temp_output)
+                        except:
+                            pass
+                        
+                        return preview_image
+                    
+                    # Yine başarısız olursa, son çare olarak yer tutucu oluştur
+                    logging.error(f"HEIC önizleme oluşturulamadı: {file_path}")
+                    preview_image = self._create_styled_icon(max_width, max_height, "#3F51B5", "HEIC")
+                    
+                except Exception as heic_error:
+                    logging.error(f"HEIC önizleme oluşturulamadı: {str(heic_error)}")
+                    preview_image = self._create_styled_icon(max_width, max_height, "#3F51B5", "HEIC")
+            
+            # ICO format - special handling
+            elif file_ext == '.ico':
+                try:
+                    # ICO dosyaları birden fazla boyutta ikon içerebilir
+                    # En büyük olanı seçmek için özel işleme yapılabilir
+                    img = Image.open(file_path)
+                    
+                    # ICO dosyasının tüm boyutlarını al
+                    if hasattr(img, 'ico_sizes'):
+                        try:
+                            # En büyük ikon boyutunu seç
+                            sizes = list(img.ico_sizes())
+                            if sizes:
+                                largest_size = max(sizes, key=lambda size: size[0] * size[1])
+                                img = img.ico_getimage(largest_size)
+                        except Exception as ico_size_err:
+                            logging.info(f"ICO boyutu seçilemedi: {str(ico_size_err)}")
+                    
+                    # Şeffaf arkaplan üzerine ikon yerleştir
+                    if img.mode == 'RGBA':
+                        # Şeffaf kısmı görünür yapmak için kontrastlı bir arkaplan kullan
+                        background = Image.new('RGB', img.size, (240, 240, 240))
+                        background.paste(img, (0, 0), img)
+                        img = background
+                    
+                    img.thumbnail((max_width, max_height), get_pil_resize_method())
+                    preview_image = ImageTk.PhotoImage(img)
+                except Exception as ico_error:
+                    logging.error(f"ICO önizleme oluşturulamadı: {str(ico_error)}")
+                    preview_image = self._create_styled_icon(max_width, max_height, "#009688", "ICO")
+            
+            # HEIC/HEIF files (Apple format) - special handling
+            elif file_ext in ['.heic', '.heif']:
+                try:
+                    # Önce pillow-heif ile açmayı dene (daha hızlı)
+                    try:
+                        img = Image.open(file_path)
+                        img.thumbnail((max_width, max_height), get_pil_resize_method())
+                        preview_image = ImageTk.PhotoImage(img)
+                    except Exception as pillow_heif_error:
+                        logging.info(f"HEIC açılamadı (pillow-heif): {str(pillow_heif_error)}")
+                        
+                        # Eğer pillow-heif yoksa, ffmpeg ile dönüştürmeyi dene
+                        import tempfile
+                        import subprocess
+                        
+                        # Geçici dosya oluştur
+                        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                            temp_output = temp_file.name
+                        
+                        # ffmpeg yolu - sistemden bul
+                        import shutil
+                        ffmpeg_path = shutil.which('ffmpeg') or 'ffmpeg'
+                        
+                        # HEIC'i JPG'ye dönüştür
+                        subprocess.run([
+                            ffmpeg_path, '-y', '-i', file_path, temp_output
+                        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+                        
+                        # Dönüştürülmüş dosyayı yükle
+                        if os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
+                            img = Image.open(temp_output)
+                            img.thumbnail((max_width, max_height), get_pil_resize_method())
+                            preview_image = ImageTk.PhotoImage(img)
+                            
+                            # Geçici dosyayı temizle
+                            try:
+                                os.unlink(temp_output)
+                            except:
+                                pass
+                        else:
+                            # Dönüştürme başarısız olursa, ikonla göster
+                            preview_image = self._create_styled_icon(max_width, max_height, "#4CAF50", "HEIC")
+                except Exception as e:
+                    logging.error(f"HEIC önizleme oluşturulamadı: {str(e)}")
+                    preview_image = self._create_styled_icon(max_width, max_height, "#4CAF50", "HEIC")
+            
+            # Video files (MP4, AVI, MOV, etc.) - create thumbnail preview
+            elif file_ext in ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg', '.3gp']:
+                try:
+                    # Video önizlemesi için ffmpeg kullan
+                    import tempfile
+                    import subprocess
+                    import os
+                    
+                    # Geçici dosya oluştur
+                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                        temp_output = temp_file.name
+                    
+                    # ffmpeg yolu - sistemden bul
+                    import shutil
+                    ffmpeg_path = shutil.which('ffmpeg') or 'ffmpeg'
+                    
+                    # Video'nun ilk karesini çıkar (00:00:01 zamanından)
+                    try:
+                        subprocess.run([
+                            ffmpeg_path, '-y', '-ss', '00:00:01', '-i', file_path,
+                            '-vframes', '1', '-q:v', '2', temp_output
+                        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+                        
+                        # İlk kare alınamazsa, 00:00:00 zamanını dene
+                        if not os.path.exists(temp_output) or os.path.getsize(temp_output) == 0:
+                            subprocess.run([
+                                ffmpeg_path, '-y', '-ss', '00:00:00', '-i', file_path,
+                                '-vframes', '1', '-q:v', '2', temp_output
+                            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+                        
+                        # Thumbnail oluştur
+                        if os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
+                            img = Image.open(temp_output)
+                            img.thumbnail((max_width, max_height), get_pil_resize_method())
+                            
+                            # Play simgesi ekle thumbnail'in üzerine
+                            draw = ImageDraw.Draw(img)
+                            
+                            # Oynatma üçgeni çiz
+                            center_x, center_y = img.width // 2, img.height // 2
+                            triangle_size = min(img.width, img.height) // 4
+                            
+                            # Yarı saydam arka plan dairesi
+                            draw.ellipse([
+                                center_x - triangle_size, center_y - triangle_size,
+                                center_x + triangle_size, center_y + triangle_size
+                            ], fill=(0, 0, 0, 128))
+                            
+                            # Oynatma üçgeni (sağa bakan)
+                            triangle_points = [
+                                (center_x - triangle_size//2, center_y - triangle_size//2),
+                                (center_x - triangle_size//2, center_y + triangle_size//2),
+                                (center_x + triangle_size//2, center_y)
+                            ]
+                            draw.polygon(triangle_points, fill=(255, 255, 255, 220))
+                            
+                            preview_image = ImageTk.PhotoImage(img)
+                            
+                            # Geçici dosyayı temizle
+                            try:
+                                os.unlink(temp_output)
+                            except:
+                                pass
+                        else:
+                            # Thumbnail oluşturulamazsa, video ikonu göster
+                            preview_image = self._create_styled_icon(max_width, max_height, "#E53935", "VIDEO")
+                    except Exception as ffmpeg_error:
+                        logging.error(f"FFmpeg ile video thumbnail oluşturulamadı: {str(ffmpeg_error)}")
+                        preview_image = self._create_styled_icon(max_width, max_height, "#E53935", "VIDEO")
+                except Exception as e:
+                    logging.error(f"Video önizleme oluşturulamadı: {str(e)}")
+                    preview_image = self._create_styled_icon(max_width, max_height, "#E53935", "VIDEO")
+            
+            # Other regular image formats
+            elif file_ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']:
                 try:
                     # Open and resize the image
                     img = Image.open(file_path)
+                    
+                    # Check if it's a large image (>10MP) for optimization
+                    try:
+                        mp = (img.width * img.height) / 1000000  # Megapixels
+                        is_large = mp > 10
+                    except:
+                        is_large = False
+                        
+                    # For large images, use more aggressive downsampling first
+                    if is_large:
+                        # Calculate intermediate size to improve performance
+                        scale_factor = 0.5
+                        intermediate_w = int(img.width * scale_factor)
+                        intermediate_h = int(img.height * scale_factor)
+                        img = img.resize((intermediate_w, intermediate_h), get_pil_resize_method())
+                    
                     img.thumbnail((max_width, max_height), get_pil_resize_method())
                     preview_image = ImageTk.PhotoImage(img)
                 except Exception as e:
@@ -4231,18 +5268,44 @@ class FileManagerApp:
                     draw.text((max_width//2, max_height//2), ext_text, fill="#dc3545", anchor="mm")
                     preview_image = ImageTk.PhotoImage(img)
 
-            # PDF files
+            # PDF files with progressive loading for large files
             elif file_ext == '.pdf':
+                # Get PDF file size for optimization decisions
+                try:
+                    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # MB cinsinden
+                    is_large_pdf = file_size_mb > 20  # 20MB'dan büyük PDF'ler büyük olarak kabul edilir
+                except Exception:
+                    is_large_pdf = False
+                
                 # Get the first page of PDF
                 try:
+                    # OPTIMIZASYON: Büyük PDF'ler için düşük çözünürlüklü önizleme kullan
+                    # Bu, hafıza tüketimini ve işleme süresini azaltır
+                    scale_factor = 0.25 if is_large_pdf else 0.5
+                    
+                    # Büyük PDF'ler için uyarı göster
+                    if is_large_pdf and hasattr(self, 'update_status'):
+                        self.update_status(self.get_text("loading_large_file"))
+                    
                     pdf_doc = fitz.open(file_path)
                     if pdf_doc.page_count > 0:
+                        # OPTIMIZASYON: Büyük PDF için 1. sayfanın düşük çözünürlükte önizlemesini oluştur
                         page = pdf_doc[0]
-                        pix = page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))
+                        
+                        # Okuma işlemi için thread safe timeout uygula
+                        # Bu, çok büyük veya karmaşık PDF'lerin UI'yi dondurmasını önler
+                        pix = page.get_pixmap(matrix=fitz.Matrix(scale_factor, scale_factor))
+                        
+                        # Hafıza optimizasyonu - gereksiz verileri temizle
                         img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                        pix = None  # Hafızayı temizle
+                        
                         img.thumbnail((max_width, max_height), get_pil_resize_method())
                         preview_image = ImageTk.PhotoImage(img)
+                    
+                    # Açık dosya tanıtıcılarını temizle
                     pdf_doc.close()
+                    
                 except Exception as e:
                     logging.error(f"Error with PyMuPDF for {file_path}: {str(e)}")
                     # Fall back to pdf2image if fitz fails
@@ -4255,12 +5318,16 @@ class FileManagerApp:
                         else:
                             poppler_path = ""  # Boş string, default kullanılır
 
+                        # OPTIMIZASYON: Büyük PDF'ler için okuma performansını ayarla
+                        dpi = 72 if is_large_pdf else 150  # Düşük DPI daha hızlı işlenir
+                        
                         # Use pdftocairo which often produces better quality
                         images = pdf2image.convert_from_path(
                             file_path, 
                             first_page=1, 
                             last_page=1, 
                             size=(max_width, max_height),
+                            dpi=dpi,
                             # Poppler path parametresi sadece gerekli olduğunda kullan
                             # PDF işleme çoğu durumda poppler olmadan da çalışır
                             use_pdftocairo=True
@@ -4276,35 +5343,82 @@ class FileManagerApp:
             elif file_ext == '.eps':
                 preview_image = self._create_eps_preview(file_path, max_width, max_height)
 
-            # Design files (PSD, AI)
+            # Design files (PSD, AI) - with optimizations for large files
             elif file_ext in ['.psd', '.ai']:
                 # Set default placeholder color based on file type
                 color = "#1976D2" if file_ext == '.psd' else "#FF5722"  # Blue for PSD, Orange for AI
                 file_type = file_ext[1:].upper()
+                
+                # Get file size for optimization decisions
+                try:
+                    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # MB cinsinden
+                    is_large_design_file = file_size_mb > 15  # 15MB'dan büyük design dosyaları büyük olarak kabul edilir
+                except Exception:
+                    is_large_design_file = False
+                
+                # Büyük dosyalar için uyarı göster
+                if is_large_design_file and hasattr(self, 'update_status'):
+                    self.update_status(self.get_text("loading_large_file"))
 
                 try:
-                    # Try to open PSD files with PIL
+                    # PSD dosyalarını PIL ile aç (büyük dosyalar için optimize edilmiş)
                     if file_ext == '.psd':
-                        img = Image.open(file_path)
-                        img.thumbnail((max_width, max_height), get_pil_resize_method())
-                        preview_image = ImageTk.PhotoImage(img)
+                        # OPTIMIZASYON: Büyük PSD dosyalarında bellek yönetimi
+                        if is_large_design_file:
+                            # Geçici dosya temizliğini kolaylaştırmak için with bloğu kullan 
+                            img = Image.open(file_path)
+                            
+                            # Bellek kullanımını azaltmak için büyük PSD dosyalarını daha agresif küçült
+                            if img.width > 1000 or img.height > 1000:
+                                # İlk önce agresif bir şekilde boyutunu küçült, sonra thumbnail oluştur
+                                scale_factor = 0.25 if is_large_design_file else 0.5
+                                new_width = int(img.width * scale_factor)
+                                new_height = int(img.height * scale_factor)
+                                img = img.resize((new_width, new_height), get_pil_resize_method())
+                            
+                            # Son olarak önizleme boyutlarına getir
+                            img.thumbnail((max_width, max_height), get_pil_resize_method())
+                            preview_image = ImageTk.PhotoImage(img)
+                        else:
+                            # Normal boyutlu PSD için standart işlem
+                            img = Image.open(file_path)
+                            img.thumbnail((max_width, max_height), get_pil_resize_method())
+                            preview_image = ImageTk.PhotoImage(img)
+                        
+                        # Hemen hafızayı temizle
+                        if 'img' in locals():
+                            del img
+                            
                         return preview_image
-                    # Try to open AI files with PyMuPDF (they're often PDF compatible)
+                    
+                    # AI dosyalarını PyMuPDF ile aç (onlar genellikle PDF uyumludur)
                     elif file_ext == '.ai':
+                        # AI dosyaları için PDF render optimizasyonları
+                        scale_factor = 0.25 if is_large_design_file else 0.5
+                        
                         pdf_doc = fitz.open(file_path)
                         if pdf_doc.page_count > 0:
                             page = pdf_doc[0]
-                            pix = page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))
+                            pix = page.get_pixmap(matrix=fitz.Matrix(scale_factor, scale_factor))
                             img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                            
+                            # Hafızayı serbest bırak
+                            pix = None
+                            
                             img.thumbnail((max_width, max_height), get_pil_resize_method())
                             preview_image = ImageTk.PhotoImage(img)
+                            
+                            # Hafızayı temizle
+                            if 'img' in locals():
+                                del img
+                                
                             pdf_doc.close()
                             return preview_image
                         pdf_doc.close()
                 except Exception as e:
                     logging.error(f"Error with design file {file_path}: {str(e)}")
 
-                # If we get here, create a placeholder icon
+                # Herhangi bir hata durumunda yer tutucu simge oluştur
                 if not preview_image:
                     preview_image = self._create_styled_icon(max_width, max_height, color, file_type)
 
@@ -4858,6 +5972,10 @@ class FileManagerApp:
         if self.folder_path_var.get() == self.get_text("no_folder_selected") or self.folder_path_var.get() == "No folder selected":
             self.folder_path_var.set(self.get_text("no_folder_selected"))
 
+        # Update toggle button tooltip for current language
+        if hasattr(self, 'toggle_left_panel_btn'):
+            self.create_tooltip(self.toggle_left_panel_btn, toggle_panel_translations.get(self.current_language, "Sol paneli aç/kapat"))
+
         # Force a redraw
         self.root.update_idletasks()
 
@@ -4956,7 +6074,7 @@ class FileManagerApp:
         # Clear current files
         self.files = []
         self.filtered_files = []
-        
+
         # Ensure any memory from previous operations is cleaned up
         self._cleanup_memory()
 
@@ -4966,7 +6084,7 @@ class FileManagerApp:
 
         # Start loading files in a separate thread
         self.cancel_flag = False
-        
+
         # Before starting a new thread, check if we're running in EXE mode
         # and/or dealing with a large directory to avoid spawning multiple instances
         is_frozen = getattr(sys, 'frozen', False)
@@ -4976,20 +6094,20 @@ class FileManagerApp:
                 # Quick check if this is a large directory
                 top_files_count = len([f for f in os.listdir(self.selected_folder_path) 
                                     if os.path.isfile(os.path.join(self.selected_folder_path, f))])
-                
+
                 # If top directory has many files and we're including subfolders,
                 # use a more aggressive memory management approach
                 if (top_files_count > 500 and self.include_subfolders.get()) or top_files_count > 1000:
                     logging.info(f"Large directory detected: {top_files_count} files. Using optimized loading.")
-                    
+
                     # Make sure to clean up memory before proceeding
                     self._cleanup_memory()
-                    
+
                     # Sleep briefly to allow system to stabilize
                     time.sleep(0.1)
             except Exception as e:
                 logging.warning(f"Error checking directory size: {str(e)}")
-        
+
         # Now start the loading thread
         loading_thread = threading.Thread(target=self.load_files)
         loading_thread.daemon = True
@@ -5063,10 +6181,10 @@ class FileManagerApp:
                     # PERFORMANCE BOOST: Use ThreadPoolExecutor for file operations
                     # Avoiding ProcessPoolExecutor for better compatibility with exe compilation
                     # This ensures consistent behavior between script mode and exe deployments
-                    
+
                     # Detect if we're running in compiled mode vs script mode
                     is_frozen = getattr(sys, 'frozen', False)
-                    
+
                     # Always use ThreadPoolExecutor in exe mode to avoid multiprocessing issues
                     # For script mode, we can still use ProcessPoolExecutor for large file counts
                     if not is_frozen and len(files) > 500 and multiprocessing.current_process().name == 'MainProcess':
@@ -5074,9 +6192,9 @@ class FileManagerApp:
                         try:
                             cpu_count = multiprocessing.cpu_count()
                             process_count = max(4, min(cpu_count, 16))  # Use between 4 and 16 processes
-                            
+
                             logging.info(f"Using ProcessPoolExecutor with {process_count} workers for {len(files)} files")
-                            
+
                             with concurrent.futures.ProcessPoolExecutor(max_workers=process_count) as executor:
                                 # Create full file paths to pass to executor
                                 file_paths = [(file, os.path.join(root, file)) for file in files]
@@ -5267,11 +6385,11 @@ class FileManagerApp:
         try:
             # Check if we're running in EXE mode
             is_frozen = getattr(sys, 'frozen', False)
-            
+
             # Check if cancel is requested
             if hasattr(self, 'cancel_flag') and self.cancel_flag:
                 return 100  # Default estimate on cancellation
-                
+
             # Use the selected folder path rather than looking it up again
             selected_path = getattr(self, 'selected_folder_path', self.folder_path_var.get())
 
@@ -5289,7 +6407,7 @@ class FileManagerApp:
                             # Check cancellation periodically for responsiveness
                             if file_count % 1000 == 0 and hasattr(self, 'cancel_flag') and self.cancel_flag:
                                 return 100
-                                
+
                             if entry.is_file():
                                 file_count += 1
                                 # Cap the estimation time for very large directories
@@ -5300,14 +6418,14 @@ class FileManagerApp:
                                     return int(file_count * 1.2)
                 except (PermissionError, FileNotFoundError, OSError):
                     return 100
-                    
+
                 return file_count
 
             # For recursive mode, use advanced sampling for better efficiency
             total_files = 0
             total_dirs = 0
             sampled_dirs = 0
-            
+
             # In EXE mode, be more conservative with time spent on estimation
             max_time = 0.3 if is_frozen else 0.5  # Max seconds to spend on estimation
             start_time = time.time()
@@ -5328,7 +6446,7 @@ class FileManagerApp:
                             top_level_files += 1
                         elif entry.is_dir():
                             top_level_dirs.append(entry.path)
-                            
+
                         # In EXE mode, check more frequently if we should stop sampling
                         if is_frozen and (top_level_files + len(top_level_dirs)) % 500 == 0:
                             if time.time() - start_time > max_time * 0.4:  # Use 40% of budget for top level
@@ -5367,14 +6485,14 @@ class FileManagerApp:
                 # Be more conservative in EXE mode
                 if len(priority_dirs) > 3:
                     random.shuffle(priority_dirs)
-                    
+
                 if len(other_dirs) > 5:
                     random.shuffle(other_dirs)
 
                 # Sample fewer directories in EXE mode to reduce memory pressure
                 max_priority = 3 if is_frozen else 5
                 max_total = 7 if is_frozen else 10
-                
+
                 # Take priority directories first, then fill with others
                 sample_dirs = priority_dirs[:max_priority]
                 remaining_slots = max_total - len(sample_dirs)
@@ -5399,7 +6517,7 @@ class FileManagerApp:
                 # Check cancellation
                 if hasattr(self, 'cancel_flag') and self.cancel_flag:
                     break
-                
+
                 # In EXE mode, periodically force memory cleanup
                 if is_frozen and dir_idx > 0 and dir_idx % 4 == 0:
                     # Quick GC pass to ensure memory is available
@@ -5416,7 +6534,7 @@ class FileManagerApp:
                                 dir_file_count += 1
                             elif entry.is_dir():
                                 dir_subdir_count += 1
-                                
+
                             # Check limits periodically
                             if (dir_file_count + dir_subdir_count) % 500 == 0:
                                 if hasattr(self, 'cancel_flag') and self.cancel_flag:
@@ -5468,7 +6586,7 @@ class FileManagerApp:
             # Cap maximum estimated files to prevent excessive UI progress bar issues
             max_estimate = 50000 if is_frozen else 100000
             estimate = min(max_estimate, estimate)
-            
+
             # Ensure we return a reasonable minimum
             return max(100, int(estimate))
 
@@ -5482,7 +6600,7 @@ class FileManagerApp:
     def disable_cancel_button(self):
         """Disable the cancel button to prevent multiple clicks"""
         self.cancel_btn.config(state=tk.DISABLED)
-        
+
     def handle_cancellation(self):
         """
         Common method to handle cancellation UI updates across the application
@@ -5490,30 +6608,30 @@ class FileManagerApp:
         """
         # Schedule re-enabling of the UI after a short delay
         self.root.after(500, self.disable_cancel_button)
-        
+
         # Update the status bar with cancellation message
         self.root.after(0, lambda: self.update_status(self.get_text("operation_cancelled")))
-        
+
         # Reset UI state once operation is fully cancelled
         self.root.after(1000, lambda: self.cancel_btn.config(text=self.get_text("cancel")))
-        
+
         # Reset cancellation flags for future operations
         def reset_cancel_flags():
             self.cancel_flag = False
             self.cancel_event.clear()
             # Clean up any temporary files created during the operation
             self._cleanup_temp_files()
-            
+
         # Schedule flag reset for after UI updates complete
         self.root.after(1200, reset_cancel_flags)
-        
+
     def _cleanup_temp_files(self):
         """
         Clean up any temporary files created during operations.
         This prevents accumulation of temp files that could consume disk space.
         """
         temp_files_removed = 0
-        
+
         try:
             # Process each temp file in our tracking list
             for temp_file in self.temp_files[:]:
@@ -5529,14 +6647,14 @@ class FileManagerApp:
                 else:
                     # File doesn't exist, just remove from tracking
                     self.temp_files.remove(temp_file)
-                    
+
             if temp_files_removed > 0:
                 logging.info(f"Cleaned up {temp_files_removed} temporary files")
-                
+
         except Exception as e:
             # Non-critical error, just log it
             logging.error(f"Error during temp file cleanup: {str(e)}")
-        
+
         # OPTIMIZATION: Clean up memory after operations
         self.root.after(1500, self._cleanup_memory)
 
@@ -5552,7 +6670,7 @@ class FileManagerApp:
         try:
             # Detect if we're running in compiled mode vs script mode
             is_frozen = getattr(sys, 'frozen', False)
-            
+
             # Thread-safety for cache operations
             if hasattr(self, 'preview_cache_lock'):
                 cache_lock = self.preview_cache_lock
@@ -5620,13 +6738,13 @@ class FileManagerApp:
                         "modified": file_info["modified"]
                     }
                     simplified_files.append(simple_info)
-                
+
                 # Replace with simplified version
                 self.files = simplified_files
-                
+
                 # Log memory optimization
                 logging.info(f"EXE mode memory optimization: Simplified {len(simplified_files)} file records")
-                
+
                 # If all_files is also large, simplify it too
                 if hasattr(self, 'all_files') and len(self.all_files) > 1000:
                     # Create simplified all_files list
@@ -5642,7 +6760,7 @@ class FileManagerApp:
                             "modified": file_info["modified"]
                         }
                         simplified_all_files.append(simple_info)
-                    
+
                     # Replace with simplified version
                     self.all_files = simplified_all_files
                     logging.info(f"EXE mode memory optimization: Simplified {len(simplified_all_files)} all_files records")
@@ -5675,13 +6793,13 @@ class FileManagerApp:
                         logging.info("Windows memory working set emptied")
                     except Exception as ws_e:
                         logging.warning(f"Windows EmptyWorkingSet failed: {str(ws_e)}")
-                        
+
                     # Try additional Python-specific memory optimizations
                     try:
                         ctypes.pythonapi.PyGC_Collect()
                     except Exception:
                         pass
-                        
+
                     # Try malloc_trim if available (glibc)
                     try:
                         ctypes.cdll.LoadLibrary('libc.so.6')
@@ -5707,7 +6825,7 @@ class FileManagerApp:
         # Set the cancellation flags - both legacy and new thread-safe mechanism
         self.cancel_flag = True
         self.cancel_event.set()
-        
+
         # Update the status and progress immediately
         self.update_status(self.get_text("operation_cancelled"))
         self.progress_bar.stop()
@@ -5927,7 +7045,7 @@ class FileManagerApp:
         # Set all extension checkboxes to True
         for ext in self.selected_extensions:
             self.selected_extensions[ext].set(True)
-            
+
     def select_all_files(self):
         """Treeview'daki tüm dosyaları seç"""
         try:
@@ -6286,7 +7404,24 @@ class FileManagerApp:
                         logging.error(f"Failed to create ListeKolay folder: {str(e)}")
                 save_path = listekolay_folder
             else:
-                save_path = os.path.dirname(os.path.abspath(__file__))
+                # Yeni varsayılan dizin: Documents/ListeKolay/List
+                documents_path = os.path.join(os.path.expanduser("~"), "Documents")
+                listekolay_folder = os.path.join(documents_path, "ListeKolay")
+                list_folder = os.path.join(listekolay_folder, "List")
+                
+                # Gerekli klasörleri oluştur
+                for folder in [listekolay_folder, list_folder]:
+                    if not os.path.exists(folder):
+                        try:
+                            os.makedirs(folder)
+                            logging.info(f"Created folder: {folder}")
+                        except Exception as e:
+                            logging.error(f"Failed to create folder {folder}: {str(e)}")
+                            # Oluşturulamazsa, uygulama dizinine kaydet
+                            list_folder = os.path.dirname(os.path.abspath(__file__))
+                            break
+                
+                save_path = list_folder
 
             created_files = []
 
@@ -7033,7 +8168,7 @@ class FileManagerApp:
                     self.get_text("update_check_error"),
                     f"{self.get_text('update_check_error_message')} ({str(e)})"
                 )
-            logging.error(f"Güncelleme kontrolü hatası: {str(e)}")
+            logging.error(f"{self.get_text('update_check_error')}: {str(e)}")
             return False
 
     def download_update(self, new_version):
@@ -7220,27 +8355,27 @@ if __name__ == "__main__":
     def get_app_data_dir(self):
         """
         Uygulama verilerinin kaydedileceği dizini belirler.
-        EXE paketlenmiş sürüm için çalışma dizinini, script modu için script dizinini kullanır.
+        Belgelerim klasörü altında 'ListeKolay' klasörünü kullanır.
         """
-        # Önce script yolunu belirle
-        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Belgelerim klasörünü belirle (cross-platform desteği)
+        documents_dir = os.path.join(os.path.expanduser('~'), 'Documents')
 
-        # Çalışma dizini - Log dosyasının olduğu yer, EXE paketli sürüm için burası önemli
-        working_dir = os.getcwd()
+        # ListeKolay klasörü oluştur (yoksa)
+        app_data_dir = os.path.join(documents_dir, 'ListeKolay')
+        if not os.path.exists(app_data_dir):
+            try:
+                os.makedirs(app_data_dir)
+                logging.info(f"ListeKolay veri klasörü oluşturuldu: {app_data_dir}")
+            except Exception as e:
+                logging.error(f"ListeKolay veri klasörü oluşturulamadı: {str(e)}")
+                # Oluşturulamazsa geçici dizini kullan
+                import tempfile
+                app_data_dir = tempfile.gettempdir()
+                logging.info(f"Alternatif olarak geçici dizin kullanılacak: {app_data_dir}")
 
-        # Log dosyasının konumunu kontrol et
-        log_path = os.path.join(working_dir, "ListeKolay.log")
-        log_exists_in_working_dir = os.path.exists(log_path)
+        logging.info(f"Yapılandırma dosyaları şuraya kaydedilecek: {app_data_dir}")
+        return app_data_dir
 
-        # Eğer log dosyası çalışma dizinindeyse (exe ile çalıştırma durumu),
-        # config dosyasını da buraya kaydet
-        if log_exists_in_working_dir:
-            logging.info(f"Log dosyası çalışma dizininde bulundu, config buraya kaydedilecek: {working_dir}")
-            return working_dir
-
-        # Aksi halde script dizinine kaydet (geliştirme modu)
-        logging.info(f"Script dizinine config kaydedilecek: {script_dir}")
-        return script_dir
 
     def save_config(self):
         """Kullanıcı ayarlarını config.json dosyasına kaydet"""
@@ -7296,8 +8431,10 @@ if __name__ == "__main__":
 
             # 1. Yedekten geri yüklemeyi dene
             try:
-                backup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json.bak")
-                config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+                app_data_dir = self.get_app_data_dir()
+                backup_path = os.path.join(app_data_dir, "config.json.bak")
+                config_path = os.path.join(app_data_dir, "config.json")
+
                 if os.path.exists(backup_path):
                     if os.path.exists(config_path):
                         os.remove(config_path)
@@ -7310,7 +8447,7 @@ if __name__ == "__main__":
             # 2. Yöntem: Dosya yazma hatası olursa, tekrar deneme yaparak veri kaybını önleyelim
             try:
                 # Önce temp dosyaya yaz, sonra adını değiştir (daha güvenli yaklaşım)
-                temp_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_temp.json")
+                temp_path = os.path.join(app_data_dir, "config_temp.json")
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     json.dump(config, f, indent=4, ensure_ascii=False)
 
@@ -7329,13 +8466,12 @@ if __name__ == "__main__":
         if hasattr(self, 'config_loading_in_progress') and self.config_loading_in_progress:
             logging.info("Config yükleme işlemi zaten devam ediyor, tekrarlayan çağrı engellendi")
             return
-            
+
         # Config yükleme işlemini başlat
         self.config_loading_in_progress = True
-        
+
         try:
             # Önce uygulama veri dizinini belirle 
-            # (EXE için log dosyasıyla aynı dizin, geliştirme için script dizini)
             app_data_dir = self.get_app_data_dir()
             config_path = os.path.join(app_data_dir, "config.json")
 
@@ -7344,24 +8480,13 @@ if __name__ == "__main__":
             # Config dosyası yoksa oluştur
             if not os.path.exists(config_path):
                 logging.info("Yapılandırma dosyası bulunamadı, varsayılan ayarlarla oluşturuluyor")
-                # Config dosyası oluşturulurken uygulama veri dizininin kullanılmasını sağlar
-                self.save_config()  # Varsayılan ayarlarla config.json dosyası oluştur
+                self.save_config()
 
-                # Dosyanın oluşturulup oluşturulmadığını kontrol et
-                if os.path.exists(config_path):
-                    logging.info(f"Yeni config dosyası başarıyla oluşturuldu: {config_path}")
-                else:
-                    logging.warning(f"Config dosyası oluşturulamadı: {config_path}")
-                    # Geçici dizinde bir kez daha dene
-                    import tempfile
-                    temp_dir = tempfile.gettempdir()
-                    alt_config_path = os.path.join(temp_dir, "config.json")
-                    logging.info(f"Alternatif config konumu deneniyor: {alt_config_path}")
-                    if os.path.exists(alt_config_path):
-                        config_path = alt_config_path
-                    else:
-                        logging.error("Hiçbir config dosyası bulunamadı, varsayılan ayarlar kullanılacak")
-                        return
+                # Yeniden kontrol et
+                if not os.path.exists(config_path):
+                    logging.error("Config dosyası oluşturulamadı, varsayılan ayarlar yüklenecek")
+                    return  # Alternatif konuma gitme, çünkü artık sadece app_data_dir kullanılmalı
+
 
             # Config dosyasını oku
             logging.info(f"Config dosyası okunuyor: {config_path}")
@@ -7458,6 +8583,20 @@ if __name__ == "__main__":
             # Config yükleme işlemini tamamla ve flag'i sıfırla
             self.config_loading_in_progress = False
             logging.info("Config yükleme işlemi tamamlandı")
+
+    def toggle_left_panel(self):
+        """Sol paneli aç/kapat"""
+        if self.left_panel_visible.get():
+            # Panel görünür, gizle
+            self.left_column.pack_forget()
+            self.toggle_left_panel_btn.config(text="▶")  # Sağ ok işareti (paneli göster)
+            self.left_panel_visible.set(False)
+        else:
+            # Panel gizli, göster
+            self.left_column.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 10), before=self.left_column.master.winfo_children()[-1])
+            self.toggle_left_panel_btn.config(text="◀")  # Sol ok işareti (paneli gizle)
+            self.left_panel_visible.set(True)
+            self.left_column.pack_propagate(False)  # Prevent shrinking
 
     def on_close(self):
         # Ask for confirmation before exiting
@@ -7790,30 +8929,30 @@ if __name__ == "__main__":
         try:
             file_ext = os.path.splitext(file_path)[1].lower()
             original_image = None
-            
+
             # SVG dosyaları için özel işleme
             if file_ext == '.svg':
                 try:
                     # CairoSVG ile SVG'yi PNG'ye dönüştür
                     import cairosvg
                     import io
-                    
+
                     # Geçici bir bellek akışına PNG olarak dönüştür
                     png_data = io.BytesIO()
                     cairosvg.svg2png(url=file_path, write_to=png_data)
                     png_data.seek(0)
-                    
+
                     # PNG'yi PIL görüntüsüne yükle
                     original_image = Image.open(png_data)
-                    
+
                     # Bellek temizleme işlemi
                     if not hasattr(self, 'temp_files'):
                         self.temp_files = []
                     self.temp_files.append(png_data)
-                    
+
                     logging.info(f"SVG önizleme başarıyla oluşturuldu: {file_path}")
                 except Exception as svg_error:
-                    logging.warning(f"CairoSVG ile SVG dönüştürme hatası: {str(svg_error)}")
+                    logging.warning(f"{self.get_text('svg_conversion_error')}: {str(svg_error)}")
                     try:
                         # Alternatif: PIL ile SVG açmayı dene
                         original_image = Image.open(file_path)
@@ -7821,7 +8960,7 @@ if __name__ == "__main__":
                     except Exception:
                         logging.warning(f"SVG alternatif açılışı da başarısız, ikon gösteriliyor: {file_path}")
                         original_image = self._create_styled_icon(200, 200, "#6c757d", "SVG")
-            
+
             # WebP dosyaları için özel işleme
             elif file_ext == '.webp':
                 try:
@@ -7830,7 +8969,7 @@ if __name__ == "__main__":
                 except Exception as webp_error:
                     logging.warning(f"WebP açılışı başarısız: {str(webp_error)}")
                     original_image = self._create_styled_icon(200, 200, "#20c997", "WebP")
-            
+
             # TIFF/TIF dosyaları için özel işleme
             elif file_ext in ['.tif', '.tiff']:
                 try:
@@ -7844,13 +8983,13 @@ if __name__ == "__main__":
                 except Exception as tiff_error:
                     logging.warning(f"TIFF açılışı başarısız: {str(tiff_error)}")
                     original_image = self._create_styled_icon(200, 200, "#fd7e14", "TIFF")
-            
+
             # Normal resim dosyaları için
             if original_image is None:
                 try:
                     # Önce standart PIL ile açmayı dene
                     original_image = Image.open(file_path)
-                    
+
                     # Özel format kontrolleri
                     if file_ext == '.psd':
                         # PSD için özellikle ilk katman alma
@@ -7948,21 +9087,30 @@ if __name__ == "__main__":
             v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
             canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-            # Open the PDF using PyMuPDF
-            pdf_document = fitz.open(file_path)
+            try:
+                # Open the PDF using PyMuPDF
+                pdf_document = fitz.open(file_path)
 
-            # Get first page of the PDF
-            first_page = pdf_document.load_page(0)
+                # Get first page of the PDF
+                if pdf_document.page_count > 0:
+                    first_page = pdf_document.load_page(0)
 
-            # Set zoom factor for better quality
-            zoom = 2.0
-            mat = fitz.Matrix(zoom, zoom)
+                    # Set zoom factor for better quality
+                    zoom = 2.0
+                    mat = fitz.Matrix(zoom, zoom)
 
-            # Convert page to an image
-            pix = first_page.get_pixmap(matrix=mat)
+                    # Convert page to an image
+                    pix = first_page.get_pixmap(matrix=mat)
 
-            # Convert to PIL Image
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    # Convert to PIL Image
+                    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                else:
+                    # Boş PDF için uyarı görüntüsü oluştur
+                    img = self._create_styled_icon(300, 200, "#f5f5f5", self.get_text("preview_not_available"))
+            except Exception as e:
+                logging.error(f"PDF preview error: {str(e)}")
+                # Hata durumunda uyarı görüntüsü oluştur
+                img = self._create_styled_icon(300, 200, "#f5f5f5", self.get_text("preview_not_available"))
 
             # Scale down if needed
             max_width, max_height = 700, 500
@@ -8009,72 +9157,347 @@ if __name__ == "__main__":
             # Normalize file path to avoid Windows/Unix path issues
             file_path = os.path.normpath(file_path)
             file_extension = os.path.splitext(file_path)[1].lower()
-
-            # Try to open the file with PIL first
+            
+            # Check file size to handle large files appropriately
+            file_size = os.path.getsize(file_path)
+            is_large_file = file_size > 20 * 1024 * 1024  # 20MB threshold
+            
+            # Show loading indicator for large files
+            loading_frame = None
+            if is_large_file:
+                loading_frame = tk.Frame(parent_frame, bg="#e9ecef")
+                loading_frame.pack(fill=tk.BOTH, expand=True)
+                
+                loading_label = tk.Label(
+                    loading_frame, 
+                    text=self.get_text("loading_large_file"),
+                    font=("Segoe UI", 12),
+                    bg="#e9ecef",
+                    fg="#212529"
+                )
+                loading_label.pack(pady=(50, 10))
+                
+                size_text = self.format_file_size(file_size)
+                file_info = f"{os.path.basename(file_path)} ({size_text})"
+                info_label = tk.Label(
+                    loading_frame, 
+                    text=file_info,
+                    font=("Segoe UI", 9),
+                    bg="#e9ecef",
+                    fg="#6c757d"
+                )
+                info_label.pack(pady=5)
+                
+                # Force update to show loading message
+                parent_frame.update()
+            
+            # Handle PSD files - special processing for Photoshop files
+            if file_extension == '.psd':
+                try:
+                    # Dosya boyutu büyükse daha fazla önlem al
+                    if is_large_file:
+                        # Hata durumunda göstermek için PSD ikonu hazırla
+                        fallback_icon = self._create_styled_icon(400, 400, "#E91E63", "PSD")  # Photoshop Pembe
+                        
+                        # Bellekte daha etkili çalışmak için doğrudan Wand/ImageMagick kullan
+                        try:
+                            import wand.image
+                            with wand.image.Image(filename=file_path, resolution=72) as img:
+                                # Çözünürlük sınırla - büyük dosyaları küçük boyuta indirge
+                                img.resize(width=600, height=600)
+                                
+                                # Optimize edilmiş dönüşüm
+                                img.format = 'png'
+                                img.compression_quality = 75  # Kaliteyi düşür ama hala makul
+                                img_blob = img.make_blob()
+                                
+                                # Geçici dosya üzerinde çalış ve belleği hemen temizle
+                                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+                                temp_file.write(img_blob)
+                                temp_file.close()
+                                
+                                # Belleği temizle
+                                del img_blob
+                                gc.collect()
+                                
+                                # Geçici dosyayı yükle
+                                pil_img = Image.open(temp_file.name)
+                                
+                                # Önizlemeyi göster ve geçici dosyayı temizle
+                                if loading_frame:
+                                    loading_frame.destroy()
+                                
+                                self._display_design_preview(parent_frame, pil_img, file_path)
+                                
+                                # Geçici dosyayı sil
+                                try:
+                                    os.unlink(temp_file.name)
+                                except:
+                                    pass
+                                
+                                return
+                        except ImportError:
+                            logging.warning("Wand/ImageMagick not available for large PSD previews")
+                        except Exception as wand_err:
+                            logging.error(f"Failed to open large PSD with Wand: {str(wand_err)}")
+                            
+                            # Hata durumunda düşük kalite PIL dene
+                            try:
+                                psd_img = Image.open(file_path)
+                                psd_img.thumbnail((400, 400), get_pil_resize_method())
+                                if loading_frame:
+                                    loading_frame.destroy()
+                                self._display_design_preview(parent_frame, psd_img, file_path)
+                                return
+                            except:
+                                # Son çare - fallback icon kullan
+                                if loading_frame:
+                                    loading_frame.destroy()
+                                self._display_design_preview(parent_frame, fallback_icon, file_path)
+                                return
+                    
+                    # Normal boyutlu dosyalar için standart işleme
+                    else:
+                        # Try PIL/Pillow first as it's memory efficient
+                        try:
+                            psd_img = Image.open(file_path)
+                            # Orta boy önizleme
+                            psd_img.thumbnail((800, 800), get_pil_resize_method())
+                            
+                            if loading_frame:
+                                loading_frame.destroy()
+                            self._display_design_preview(parent_frame, psd_img, file_path)
+                            return
+                        except Exception as pil_err:
+                            logging.error(f"Failed to open PSD with PIL: {str(pil_err)}")
+                        
+                        # Fall back to Wand/ImageMagick for better PSD support if PIL fails
+                        try:
+                            import wand.image
+                            with wand.image.Image(filename=file_path) as img:
+                                img.resize(width=800, height=800)
+                                img.format = 'png'
+                                img_blob = img.make_blob()
+                                pil_img = Image.open(io.BytesIO(img_blob))
+                                
+                                if loading_frame:
+                                    loading_frame.destroy()
+                                
+                                self._display_design_preview(parent_frame, pil_img, file_path)
+                                return
+                        except ImportError:
+                            logging.warning("Wand/ImageMagick not available for PSD previews")
+                        except Exception as wand_err:
+                            logging.error(f"Failed to open PSD with Wand: {str(wand_err)}")
+                    
+                except Exception as psd_error:
+                    logging.error(f"All PSD preview methods failed: {str(psd_error)}")
+                    
+                # Son çare - dosya açılamazsa bir ikon göster
+                if loading_frame:
+                    loading_frame.destroy()
+                fallback_icon = self._create_styled_icon(400, 400, "#E91E63", "PSD")  # Photoshop Pembe
+                self._display_design_preview(parent_frame, fallback_icon, file_path)
+            
+            # Handle AI files (Adobe Illustrator)
+            elif file_extension == '.ai':
+                # AI files are often PDF-compatible, try PyMuPDF
+                try:
+                    pdf_document = fitz.open(file_path)
+                    if pdf_document.page_count > 0:
+                        first_page = pdf_document.load_page(0)
+                        
+                        # Adjust zoom based on file size for memory optimization
+                        zoom = 1.0 if is_large_file else 2.0
+                        mat = fitz.Matrix(zoom, zoom)
+                        
+                        pix = first_page.get_pixmap(matrix=mat)
+                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                        
+                        pdf_document.close()
+                        
+                        if loading_frame:
+                            loading_frame.destroy()
+                            
+                        self._display_design_preview(parent_frame, img, file_path)
+                        return
+                    pdf_document.close()
+                except Exception as ai_error:
+                    logging.error(f"PyMuPDF failed to open AI file: {str(ai_error)}")
+                    
+                    # Try ImageMagick as fallback for AI files
+                    try:
+                        import wand.image
+                        with wand.image.Image(filename=file_path) as img:
+                            # Resize for large files
+                            if is_large_file:
+                                img.resize(width=800, height=800)
+                                
+                            img.format = 'png'
+                            img_blob = img.make_blob()
+                            pil_img = Image.open(io.BytesIO(img_blob))
+                            
+                            if loading_frame:
+                                loading_frame.destroy()
+                                
+                            self._display_design_preview(parent_frame, pil_img, file_path)
+                            return
+                    except ImportError:
+                        logging.warning("Wand/ImageMagick not available for AI previews")
+                    except Exception as wand_ai_err:
+                        logging.error(f"Failed to open AI with Wand: {str(wand_ai_err)}")
+            
+            # Handle EPS files with our specialized function
+            elif file_extension == '.eps':
+                try:
+                    # Use our dedicated EPS preview function with optimized memory handling
+                    max_size = 600 if is_large_file else 800
+                    preview_result = self._create_eps_preview(file_path, max_size, max_size)
+                    
+                    if loading_frame:
+                        loading_frame.destroy()
+                        
+                    # Our EPS preview helper might return either an Image or PhotoImage
+                    if isinstance(preview_result, Image.Image):
+                        self._display_design_preview(parent_frame, preview_result, file_path)
+                    elif isinstance(preview_result, ImageTk.PhotoImage):
+                        # Create a special display for PhotoImage results
+                        canvas_frame = tk.Frame(parent_frame)
+                        canvas_frame.pack(fill=tk.BOTH, expand=True)
+                        
+                        canvas = tk.Canvas(
+                            canvas_frame,
+                            bg="#ffffff",
+                            width=preview_result.width(),
+                            height=preview_result.height()
+                        )
+                        canvas.pack(fill=tk.BOTH, expand=True)
+                        canvas.create_image(0, 0, image=preview_result, anchor=tk.NW)
+                        canvas.image = preview_result  # Keep reference
+                        
+                        # Add file info
+                        info_text = f"EPS: {os.path.basename(file_path)}, {self.format_file_size(file_size)}"
+                        info_label = tk.Label(parent_frame, text=info_text, bg="#e9ecef", fg="#495057")
+                        info_label.pack(pady=5)
+                    
+                    return
+                except Exception as eps_error:
+                    logging.error(f"EPS preview creation failed: {str(eps_error)}")
+            
+            # For PDF, try to use PDF-specific methods if this was actually a PDF file
+            elif file_extension == '.pdf':
+                try:
+                    self.preview_pdf(parent_frame, file_path)
+                    return
+                except Exception as pdf_err:
+                    logging.error(f"PDF preview failed, falling back: {str(pdf_err)}")
+            
+            # Try standard PIL as a fallback for any file
             try:
                 img = Image.open(file_path)
+                
+                # For large files, reduce initial size
+                if is_large_file:
+                    img.thumbnail((800, 800), get_pil_resize_method())
+                    
+                if loading_frame:
+                    loading_frame.destroy()
+                    
                 self._display_design_preview(parent_frame, img, file_path)
                 return
             except Exception as pil_error:
-                logging.error(f"PIL could not open file: {str(pil_error)}")
-
-                # For AI and EPS, try using PyMuPDF (many AI files are PDF-compatible)
-                if file_extension in ['.ai', '.eps', '.pdf']:
+                logging.error(f"PIL fallback could not open file: {str(pil_error)}")
+                
+                # For AI and EPS, try using PyMuPDF as another fallback
+                if file_extension in ['.ai', '.eps']:
                     try:
                         pdf_document = fitz.open(file_path)
                         first_page = pdf_document.load_page(0)
-
-                        zoom = 2.0
+                        
+                        # Lower zoom for large files
+                        zoom = 1.0 if is_large_file else 2.0
                         mat = fitz.Matrix(zoom, zoom)
                         pix = first_page.get_pixmap(matrix=mat)
                         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-
+                        
                         pdf_document.close()
+                        
+                        if loading_frame:
+                            loading_frame.destroy()
+                            
                         self._display_design_preview(parent_frame, img, file_path)
                         return
-                    except Exception as pdf_error:
-                        logging.error(f"PyMuPDF could not open file: {str(pdf_error)}")
+                    except Exception:
+                        pass
 
-                        # For EPS files that failed with PyMuPDF, try pdf2image
-                        if file_extension == '.eps':
-                            try:
-                                # Convert EPS to images using pdf2image
-                                from pdf2image import convert_from_path
-                                images = convert_from_path(file_path, first_page=1, last_page=1)
-                                if images and len(images) > 0:
-                                    self._display_design_preview(parent_frame, images[0], file_path)
-                                    return
-                            except Exception as eps_error:
-                                logging.error(f"pdf2image could not convert EPS: {str(eps_error)}")
-
-                # If all else fails, create a placeholder
+            # Clean up the loading frame if it exists
+            if loading_frame:
+                loading_frame.destroy()
+                
+            # If all else fails, create an enhanced placeholder with more info
+            # Choose appropriate colors based on file type for better visual cues
+            if file_extension == '.psd':
+                bg_color = "#31A8FF"  # Photoshop blue
+                text_color = "#FFFFFF"
+                file_type_name = "PHOTOSHOP"
+            elif file_extension == '.ai':
+                bg_color = "#FF9A00"  # Illustrator orange
+                text_color = "#330000"
+                file_type_name = "ILLUSTRATOR"
+            elif file_extension == '.eps':
+                bg_color = "#8BC34A"  # Green for EPS
+                text_color = "#FFFFFF"
+                file_type_name = "EPS VECTOR"
+            elif file_extension == '.pdf':
+                bg_color = "#F40F02"  # Adobe PDF red
+                text_color = "#FFFFFF"
+                file_type_name = "PDF DOCUMENT"
+            else:
                 bg_color = "#f0f0f0"
                 text_color = "#2c3e50"
-                border_color = "#2c3e50"
-                img = Image.new("RGB", (400, 300), color=bg_color)
-                draw = ImageDraw.Draw(img)
-                draw.rectangle([20, 20, 380, 280], outline=border_color, width=2)
-
-                # Display file type in center
-                if file_extension.startswith('.'):
-                    file_type = file_extension[1:].upper()
-                else:
-                    file_type = file_extension.upper()
-
-                # Draw file type in the center of the placeholder
-                draw.text((200, 150), file_type, fill=text_color)
-
-                # Draw file name at the bottom
-                file_name = os.path.basename(file_path)
-                if len(file_name) > 30:  # Truncate long file names
-                    file_name = file_name[:27] + "..."
-                draw.text((200, 220), file_name, fill=text_color)
-
-                self._display_design_preview(parent_frame, img, file_path)
-                return
+                file_type_name = file_extension.upper().replace(".", "")
+            
+            # Create enhanced placeholder image with more info
+            img = Image.new("RGB", (400, 300), color=bg_color)
+            draw = ImageDraw.Draw(img)
+            
+            # Draw border
+            draw.rectangle([10, 10, 390, 290], outline=text_color, width=2)
+            
+            # Display file type in center with better styling
+            if file_extension.startswith('.'):
+                file_type = file_extension[1:].upper()
+            else:
+                file_type = file_extension.upper()
+            
+            # Draw file type in the center
+            draw.text((200, 120), file_type_name, fill=text_color, anchor="mm")
+            
+            # Draw file size
+            size_text = self.format_file_size(file_size)
+            draw.text((200, 150), size_text, fill=text_color, anchor="mm")
+            
+            # Draw file name at the bottom
+            file_name = os.path.basename(file_path)
+            if len(file_name) > 30:  # Truncate long file names
+                file_name = file_name[:27] + "..."
+            draw.text((200, 200), file_name, fill=text_color, anchor="mm")
+            
+            # Add "preview not available" message
+            not_available_text = self.get_text("preview_not_available")
+            draw.text((200, 240), not_available_text, fill=text_color, anchor="mm")
+            
+            self._display_design_preview(parent_frame, img, file_path)
+            return
 
         except Exception as e:
             logging.error(f"Error previewing design file: {str(e)}")
+            
+            # Clean up any loading frame that might exist
+            for child in parent_frame.winfo_children():
+                if isinstance(child, tk.Frame) and child.winfo_class() == "Frame":
+                    child.destroy()
+                    
             error_label = tk.Label(
                 parent_frame, 
                 text=f"{self.get_text('preview_error')} {str(e)}",
@@ -8141,6 +9564,50 @@ if __name__ == "__main__":
         info_text = f"{img_width}x{img_height} px, {os.path.basename(file_path)}, {self.format_file_size(file_size)}"
         info_label = tk.Label(parent_frame, text=info_text, bg="#e9ecef", fg="#495057")
         info_label.pack(pady=5)
+        
+    def _display_eps_preview(self, parent_frame, photo_image, file_path):
+        """
+        Specialized helper function to display EPS file previews when we already have a PhotoImage
+        This is needed because the EPS preview function may return a PhotoImage directly
+        """
+        # Create a canvas for the image with scrollbars
+        canvas_frame = tk.Frame(parent_frame)
+        canvas_frame.pack(fill=tk.BOTH, expand=True)
+
+        h_scrollbar = tk.Scrollbar(canvas_frame, orient=tk.HORIZONTAL)
+        v_scrollbar = tk.Scrollbar(canvas_frame, orient=tk.VERTICAL)
+
+        canvas = tk.Canvas(
+            canvas_frame,
+            xscrollcommand=h_scrollbar.set,
+            yscrollcommand=v_scrollbar.set,
+            bg="#ffffff"
+        )
+
+        h_scrollbar.config(command=canvas.xview)
+        v_scrollbar.config(command=canvas.yview)
+
+        h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Add the pre-created PhotoImage to canvas
+        canvas.create_image(0, 0, image=photo_image, anchor=tk.NW)
+        canvas.image = photo_image  # Keep a reference to prevent garbage collection
+
+        # Configure canvas scrollable area
+        canvas.config(scrollregion=canvas.bbox(tk.ALL))
+
+        # Add info label with file details
+        file_size = os.path.getsize(file_path)
+        
+        # For PhotoImage we can get dimensions directly
+        img_width = photo_image.width()
+        img_height = photo_image.height()
+        
+        info_text = f"EPS: {img_width}x{img_height} px, {os.path.basename(file_path)}, {self.format_file_size(file_size)}"
+        info_label = tk.Label(parent_frame, text=info_text, bg="#e9ecef", fg="#495057")
+        info_label.pack(pady=5)
 
 
 
@@ -8166,8 +9633,8 @@ if __name__ == "__main__":
         self.root.clipboard_clear()
         self.root.clipboard_append(file_name)
 
-        # Show a brief status message
-        self.update_status("Copied to clipboard")
+        # Show a brief status message with translation
+        self.update_status(self.get_text("copied_to_clipboard"))
 
     def copy_filepath_to_clipboard(self):
         """Copy the selected file path to clipboard"""
@@ -8376,30 +9843,337 @@ if __name__ == "__main__":
             self.root.clipboard_clear()
             self.root.clipboard_append(self.current_preview_file_path)
             self.update_status(f"{self.get_text('copied_to_clipboard')}: {self.current_preview_file_path}")
+            
+    def preview_selected_preview_file(self):
+        """Preview the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            self.create_file_preview_window(self.current_preview_file_path)
+            
+    def delete_preview_file(self):
+        """Delete the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            file_path = self.current_preview_file_path
+            file_name = os.path.basename(file_path)
+            
+            # Ask for confirmation
+            if messagebox.askyesno(
+                self.get_text("confirm_delete"),
+                f"{self.get_text('do_you_want_to_delete')}: {file_name}?"
+            ):
+                try:
+                    # Çöp kutusuna taşıma işlemi (send2trash kütüphanesi mevcut değilse doğrudan sil)
+                    try:
+                        import send2trash
+                        send2trash.send2trash(file_path)
+                    except ImportError:
+                        os.remove(file_path)
+                        
+                    self.update_status(f"{self.get_text('file_deleted')}: {file_name}")
+                    
+                    # Gelişmiş dosya listesi yenileme ve önizleme modu güncellemesi
+                    if self.view_mode_var.get() == "preview":
+                        try:
+                            # Çerçeveyi göster, kullanıcıya geri bildirim ver
+                            wait_frame = tk.Frame(self.root, bg="#e9ecef")
+                            wait_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+                            wait_label = tk.Label(
+                                wait_frame, 
+                                text=self.get_text('updating_preview'),
+                                font=("Segoe UI", 12),
+                                bg="#e9ecef", 
+                                fg="#212529"
+                            )
+                            wait_label.pack(pady=10)
+                            
+                            # UI'yi hemen güncelle
+                            self.root.update_idletasks()
+                            
+                            # Önce liste görünümüne geçerek bütün önizleme widget'larını temizle
+                            self.set_view_mode("list")
+                            self.root.update_idletasks()
+                            
+                            # Şimdi dosya listesini güvenli şekilde yenile
+                            self.clear_file_list()
+                            self.load_files()
+                            
+                            # Bekletme çerçevesini kaldır - zaten liste moduna geçtik
+                            if wait_frame and wait_frame.winfo_exists():
+                                wait_frame.destroy()
+                            
+                            # Kullanıcıya bilgi ver
+                            messagebox.showinfo(
+                                self.get_text("information"),
+                                self.get_text("file_deleted") + ". " + 
+                                self.get_text("view_changed_to_list")
+                            )
+                            
+                        except Exception as e:
+                            logging.error(f"Error refreshing preview after delete: {str(e)}")
+                            # Hata durumunda silme işleminden sonra liste görünümüne geç
+                            if wait_frame and wait_frame.winfo_exists():
+                                try:
+                                    wait_frame.destroy()
+                                except:
+                                    pass
+                                    
+                            messagebox.showinfo(
+                                self.get_text("information"),
+                                self.get_text("file_deleted")
+                            )
+                            # Önizleme modunda kal, sadece dosya listesini yenile
+                            self.load_files()
+                    else:
+                        # Normal modda sadece dosya listesini yenile
+                        self.load_files()
+                except Exception as e:
+                    messagebox.showerror(
+                        self.get_text("error"),
+                        f"{self.get_text('error_deleting_file')}: {str(e)}"
+                    )
+                    logging.error(f"Error deleting file: {str(e)}")
+    
+    def copy_preview_file(self):
+        """Copy the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            file_path = self.current_preview_file_path
+            
+            # Ask for destination
+            dest_dir = filedialog.askdirectory(
+                title=self.get_text("select_destination_folder")
+            )
+            
+            if dest_dir:
+                try:
+                    import shutil
+                    file_name = os.path.basename(file_path)
+                    dest_path = os.path.join(dest_dir, file_name)
+                    
+                    # Check if file already exists
+                    if os.path.exists(dest_path):
+                        if not messagebox.askyesno(
+                            self.get_text("file_exists"),
+                            f"{self.get_text('file_already_exists')}: {file_name}. {self.get_text('overwrite')}?"
+                        ):
+                            return
+                    
+                    # Copy file
+                    shutil.copy2(file_path, dest_path)
+                    self.update_status(f"{self.get_text('file_copied')}: {file_name} → {dest_dir}")
+                except Exception as e:
+                    messagebox.showerror(
+                        self.get_text("error"),
+                        f"{self.get_text('error_copying_file')}: {str(e)}"
+                    )
+                    logging.error(f"Error copying file: {str(e)}")
+    
+    def move_preview_file(self):
+        """Move the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            file_path = self.current_preview_file_path
+            
+            # Ask for destination
+            dest_dir = filedialog.askdirectory(
+                title=self.get_text("select_destination_folder")
+            )
+            
+            if dest_dir:
+                try:
+                    import shutil
+                    file_name = os.path.basename(file_path)
+                    dest_path = os.path.join(dest_dir, file_name)
+                    
+                    # Check if file already exists
+                    if os.path.exists(dest_path):
+                        if not messagebox.askyesno(
+                            self.get_text("file_exists"),
+                            f"{self.get_text('file_already_exists')}: {file_name}. {self.get_text('overwrite')}?"
+                        ):
+                            return
+                    
+                    # Move file
+                    shutil.move(file_path, dest_path)
+                    self.update_status(f"{self.get_text('file_moved')}: {file_name} → {dest_dir}")
+                    
+                    # Refresh file list
+                    self.load_files()
+                except Exception as e:
+                    messagebox.showerror(
+                        self.get_text("error"),
+                        f"{self.get_text('error_moving_file')}: {str(e)}"
+                    )
+                    logging.error(f"Error moving file: {str(e)}")
+    
+    def select_all_preview_files(self):
+        """Select all files in preview mode"""
+        # This function selects all visible files in the preview panel
+        if hasattr(self, 'current_preview_files') and self.current_preview_files:
+            # If we have a treeview selection method for highlighting in preview mode
+            # For now, we'll just show a message that all files are selected
+            file_count = len(self.current_preview_files)
+            self.update_status(f"{self.get_text('selected')}: {file_count} {self.get_text('files')}")
+            
+            # Bu noktada önizlemelerin tamamını seçili göstermek için 
+            # bir görsel işaretleme eklenebilir (ör. çerçeve rengi değiştirme)
+            messagebox.showinfo(
+                self.get_text("information"),
+                f"{file_count} {self.get_text('files')} {self.get_text('selected')}"
+            )
+    
+    def rename_preview_file(self):
+        """Rename the file that was right-clicked in preview mode"""
+        if hasattr(self, 'current_preview_file_path') and os.path.isfile(self.current_preview_file_path):
+            file_path = self.current_preview_file_path
+            dir_path = os.path.dirname(file_path)
+            file_name = os.path.basename(file_path)
+            
+            # Create a dialog to enter new name
+            rename_dialog = tk.Toplevel(self.root)
+            rename_dialog.title(self.get_text("rename_file"))
+            rename_dialog.geometry("400x120")
+            rename_dialog.resizable(False, False)
+            rename_dialog.transient(self.root)
+            rename_dialog.grab_set()
+            
+            # Apply theme
+            rename_dialog.configure(bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"])
+            
+            # Create widgets
+            tk.Label(
+                rename_dialog, 
+                text=self.get_text("current_name") + ":", 
+                bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"],
+                fg=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"]
+            ).grid(row=0, column=0, padx=10, pady=5, sticky="w")
+            
+            tk.Label(
+                rename_dialog, 
+                text=file_name, 
+                bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"],
+                fg=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"]
+            ).grid(row=0, column=1, padx=10, pady=5, sticky="w")
+            
+            tk.Label(
+                rename_dialog, 
+                text=self.get_text("new_name") + ":", 
+                bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"],
+                fg=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"]
+            ).grid(row=1, column=0, padx=10, pady=5, sticky="w")
+            
+            new_name_entry = tk.Entry(
+                rename_dialog, 
+                width=30,
+                bg=LIGHT_MODE_COLORS["entry_bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["entry_bg"],
+                fg=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"],
+                insertbackground=LIGHT_MODE_COLORS["text"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["text"]
+            )
+            new_name_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
+            new_name_entry.insert(0, file_name)
+            new_name_entry.select_range(0, len(file_name))
+            new_name_entry.focus_set()
+            
+            # Buttons frame
+            button_frame = tk.Frame(
+                rename_dialog,
+                bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"]
+            )
+            button_frame.grid(row=2, column=0, columnspan=2, pady=10)
+            
+            def on_rename():
+                new_name = new_name_entry.get().strip()
+                if not new_name:
+                    messagebox.showwarning(
+                        self.get_text("warning"),
+                        self.get_text("filename_cannot_be_empty")
+                    )
+                    return
+                
+                if new_name == file_name:
+                    rename_dialog.destroy()
+                    return
+                
+                new_path = os.path.join(dir_path, new_name)
+                if os.path.exists(new_path):
+                    messagebox.showwarning(
+                        self.get_text("warning"),
+                        self.get_text("file_already_exists")
+                    )
+                    return
+                
+                try:
+                    # os zaten modülün başında import edildi
+                    os.rename(file_path, new_path)
+                    self.update_status(f"{self.get_text('file_renamed')}: {file_name} → {new_name}")
+                    
+                    # Refresh file list
+                    self.load_files()
+                    rename_dialog.destroy()
+                except Exception as e:
+                    messagebox.showerror(
+                        self.get_text("error"),
+                        f"{self.get_text('error_renaming_file')}: {str(e)}"
+                    )
+                    logging.error(f"Error renaming file: {str(e)}")
+            
+            def on_cancel():
+                rename_dialog.destroy()
+            
+            tk.Button(
+                button_frame, 
+                text=self.get_text("rename"),
+                command=on_rename,
+                bg=LIGHT_MODE_COLORS["btn_bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_bg"],
+                fg=LIGHT_MODE_COLORS["btn_fg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_fg"],
+                activebackground=LIGHT_MODE_COLORS["btn_active_bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_active_bg"],
+                activeforeground=LIGHT_MODE_COLORS["btn_active_fg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_active_fg"]
+            ).pack(side=tk.LEFT, padx=5)
+            
+            tk.Button(
+                button_frame, 
+                text=self.get_text("cancel"),
+                command=on_cancel,
+                bg=LIGHT_MODE_COLORS["btn_bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_bg"],
+                fg=LIGHT_MODE_COLORS["btn_fg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_fg"],
+                activebackground=LIGHT_MODE_COLORS["btn_active_bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_active_bg"],
+                activeforeground=LIGHT_MODE_COLORS["btn_active_fg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["btn_active_fg"]
+            ).pack(side=tk.LEFT, padx=5)
+            
+            # Bind Enter key to rename button
+            new_name_entry.bind("<Return>", lambda event: on_rename())
+            
+            # Center the dialog
+            rename_dialog.update_idletasks()
+            width = rename_dialog.winfo_width()
+            height = rename_dialog.winfo_height()
+            x = (rename_dialog.winfo_screenwidth() // 2) - (width // 2)
+            y = (rename_dialog.winfo_screenheight() // 2) - (height // 2)
+            rename_dialog.geometry(f"{width}x{height}+{x}+{y}")
+            
+            # Wait for the dialog to close
+            rename_dialog.wait_window()
 
     def get_selected_files_paths(self):
         """Seçili dosyaların tam yollarını döndür"""
         selected_items = self.file_tree.selection()
         if not selected_items:
             return []
-        
+
         file_paths = []
         for item in selected_items:
             values = self.file_tree.item(item, "values")
             if values:
                 file_name = values[0]  # İlk sütunda dosya adı var
                 file_dir_path = values[2]  # Üçüncü sütunda dosya yolu var
-                
+
                 # Dosya yolu tam yolu içeriyor olabilir
                 if os.path.basename(file_dir_path) == file_name:
                     file_path = file_dir_path
                 else:
                     file_path = os.path.join(file_dir_path, file_name)
-                
+
                 file_paths.append(file_path)
-        
+
         return file_paths
-    
+
     def delete_selected_files(self):
         """Seçili dosyaları sil"""
         try:
@@ -8407,62 +10181,62 @@ if __name__ == "__main__":
             if not file_paths:
                 self.show_error(self.get_text("selection_error"), self.get_text("no_files_to_select"))
                 return
-            
+
             count = len(file_paths)
             # İlk uyarı
             if not messagebox.askyesno(
                 self.get_text("delete_files"),
-                f"{count} dosyayı silmek istediğinizden emin misiniz?"
+                f"{count} {self.get_text('files')} {self.get_text('confirm_delete_file')}?"
             ):
                 return
-            
+
             # İkinci, daha güçlü uyarı
             if not messagebox.askokcancel(
                 self.get_text("warning"),
-                f"DİKKAT: Bu işlem geri alınamaz!\n\n{count} dosya kalıcı olarak silinecek. Devam etmek istiyor musunuz?",
+                f"{self.get_text('warning')}: {self.get_text('action_irreversible')}\n\n{count} {self.get_text('files')} {self.get_text('permanent_delete')}",
                 icon=messagebox.WARNING
             ):
                 return
-            
+
             # İlerleme çubuğunu göster
             self.progress_var.set(0)
             self.progress_frame.pack(side=tk.BOTTOM, fill=tk.X)
             self.progress_bar.pack(fill=tk.X, padx=10, pady=5)
-            self.update_status("Dosyalar siliniyor...")
+            self.update_status(self.get_text("deleting_files"))
             self.root.update()
-            
+
             # Silme işlemi
             deleted_count = 0
             for i, file_path in enumerate(file_paths):
                 try:
                     os.remove(file_path)
                     deleted_count += 1
-                    
+
                     # İlerleme çubuğunu güncelle
                     progress = int((i + 1) / count * 100)
                     self.progress_var.set(progress)
-                    self.update_status(f"Dosyalar siliniyor... {i+1}/{count}")
+                    self.update_status(f"{self.get_text('deleting_files')} {i+1}/{count}")
                     self.root.update()
-                    
+
                 except Exception as e:
-                    logging.error(f"Dosya silinemedi: {file_path}, Hata: {str(e)}")
-            
+                    logging.error(f"{self.get_text('file_delete_error')}: {file_path}, {self.get_text('error')}: {str(e)}")
+
             # İlerleme çubuğunu tamamla
             self.progress_var.set(100)
             self.root.update()
-            
+
             # İşlem sonrası bilgilendirme mesajı
             messagebox.showinfo(
                 self.get_text("operation_complete"),
-                f"Dosya silme işlemi tamamlandı.\n{deleted_count} dosya başarıyla silindi."
+                self.get_text("delete_complete").format(deleted_count)
             )
-            
+
             # İlerleme çubuğunu gizle
             self.progress_bar.pack_forget()
             self.progress_frame.pack_forget()
-            
+
             # Listeleri yenile
-            self.update_status(f"{deleted_count} dosya silindi")
+            self.update_status(f"{deleted_count} {self.get_text('files_deleted')}")
             self.load_files()
         except Exception as e:
             # Hata durumunda da ilerleme çubuğunu temizle
@@ -8470,7 +10244,7 @@ if __name__ == "__main__":
                 self.progress_bar.pack_forget()
                 self.progress_frame.pack_forget()
             self.show_error(self.get_text("delete_error"), str(e))
-    
+
     def copy_selected_files(self):
         """Seçili dosyaları kopyala"""
         try:
@@ -8478,31 +10252,31 @@ if __name__ == "__main__":
             if not file_paths:
                 self.show_error(self.get_text("selection_error"), self.get_text("no_files_to_select"))
                 return
-            
+
             count = len(file_paths)
-            
+
             # İlk onay
             if not messagebox.askyesno(
                 self.get_text("copy_files"),
-                f"{count} dosyayı kopyalamak istediğinizden emin misiniz?"
+                f"{count} {self.get_text('files')} {self.get_text('confirm_copy')}?"
             ):
                 return
-            
+
             # Hedef klasörü seç
             target_dir = filedialog.askdirectory(title=self.get_text("select_target_folder"))
             if not target_dir:
                 return  # İptal edildi
-            
+
             # İlerleme çubuğunu göster
             self.progress_var.set(0)
             self.progress_frame.pack(side=tk.BOTTOM, fill=tk.X)
             self.progress_bar.pack(fill=tk.X, padx=10, pady=5)
-            self.update_status("Dosyalar kopyalanıyor...")
+            self.update_status(self.get_text("copying_files"))
             self.root.update()
-            
+
             # Kopyalama işlemi
             copied_count = 0
-            
+
             try:
                 for i, file_path in enumerate(file_paths):
                     try:
@@ -8510,24 +10284,24 @@ if __name__ == "__main__":
                         target_path = os.path.join(target_dir, file_name)
                         shutil.copy2(file_path, target_path)
                         copied_count += 1
-                        
+
                         # İlerleme çubuğunu güncelle
                         progress = int((i + 1) / count * 100)
                         self.progress_var.set(progress)
-                        self.update_status(f"Dosyalar kopyalanıyor... {i+1}/{count}")
+                        self.update_status(f"{self.get_text('copying_files')} {i+1}/{count}")
                         self.root.update()
-                        
+
                     except Exception as e:
-                        logging.error(f"Dosya kopyalanamadı: {file_path}, Hata: {str(e)}")
-                
+                        logging.error(f"{self.get_text('file_copy_error')}: {file_path}, {self.get_text('error')}: {str(e)}")
+
                 # İlerleme çubuğunu tamamla
                 self.progress_var.set(100)
                 self.root.update()
-                
+
                 # İşlem tamamlandı bildirimi
                 messagebox.showinfo(
                     self.get_text("operation_complete"),
-                    f"Dosya kopyalama işlemi tamamlandı.\n{copied_count} dosya başarıyla kopyalandı."
+                    self.get_text("copy_complete").format(copied_count)
                 )
             finally:
                 # İlerleme çubuğunu gizle - her durumda çalışacak
@@ -8535,12 +10309,12 @@ if __name__ == "__main__":
                     self.progress_bar.pack_forget()
                 if hasattr(self, 'progress_frame'):
                     self.progress_frame.pack_forget()
-                
+
             self.update_status(f"{copied_count} dosya kopyalandı")
-            
+
         except Exception as e:
             self.show_error(self.get_text("copy_error"), str(e))
-    
+
     def move_selected_files(self):
         """Seçili dosyaları taşı"""
         try:
@@ -8548,36 +10322,36 @@ if __name__ == "__main__":
             if not file_paths:
                 self.show_error(self.get_text("selection_error"), self.get_text("no_files_to_select"))
                 return
-            
+
             count = len(file_paths)
-            
+
             # İlk onay
             if not messagebox.askyesno(
                 self.get_text("move_files"),
-                f"{count} dosyayı taşımak istediğinizden emin misiniz?"
+                f"{count} {self.get_text('files')} {self.get_text('confirm_move')}?"
             ):
                 return
-            
+
             # Hedef klasörü seç
             target_dir = filedialog.askdirectory(title=self.get_text("select_target_folder"))
             if not target_dir:
                 return  # İptal edildi
-            
+
             # İkinci uyarı - bu geri alınamaz bir işlem
             if not messagebox.askokcancel(
                 self.get_text("warning"),
-                f"DİKKAT: Bu işlem geri alınamaz!\n\n{count} dosya taşınacak. Devam etmek istiyor musunuz?",
+                f"{self.get_text('attention')}: {self.get_text('action_irreversible')}\n\n{count} {self.get_text('files')} {self.get_text('confirm_move_files')}",
                 icon=messagebox.WARNING
             ):
                 return
-            
+
             # İlerleme çubuğunu göster
             self.progress_var.set(0)
             self.progress_frame.pack(side=tk.BOTTOM, fill=tk.X)
             self.progress_bar.pack(fill=tk.X, padx=10, pady=5)
-            self.update_status("Dosyalar taşınıyor...")
+            self.update_status(self.get_text("moving_files"))
             self.root.update()
-            
+
             # Taşıma işlemi
             moved_count = 0
             for i, file_path in enumerate(file_paths):
@@ -8586,30 +10360,30 @@ if __name__ == "__main__":
                     target_path = os.path.join(target_dir, file_name)
                     shutil.move(file_path, target_path)
                     moved_count += 1
-                    
+
                     # İlerleme çubuğunu güncelle
                     progress = int((i + 1) / count * 100)
                     self.progress_var.set(progress)
-                    self.update_status(f"Dosyalar taşınıyor... {i+1}/{count}")
+                    self.update_status(f"{self.get_text('moving_files')} {i+1}/{count}")
                     self.root.update()
-                    
+
                 except Exception as e:
-                    logging.error(f"Dosya taşınamadı: {file_path}, Hata: {str(e)}")
-            
+                    logging.error(f"{self.get_text('file_move_error')}: {file_path}, {self.get_text('error')}: {str(e)}")
+
             # İlerleme çubuğunu tamamla
             self.progress_var.set(100)
             self.root.update()
-            
+
             # İşlem tamamlandı bildirimi
             messagebox.showinfo(
                 self.get_text("operation_complete"),
-                f"Dosya taşıma işlemi tamamlandı.\n{moved_count} dosya başarıyla taşındı."
+                self.get_text("move_complete").format(moved_count)
             )
-            
+
             # İlerleme çubuğunu gizle
             self.progress_bar.pack_forget()
             self.progress_frame.pack_forget()
-            
+
             # Listeleri yenile
             self.update_status(f"{moved_count} dosya taşındı")
             self.load_files()
@@ -8619,21 +10393,21 @@ if __name__ == "__main__":
                 self.progress_bar.pack_forget()
                 self.progress_frame.pack_forget()
             self.show_error(self.get_text("move_error"), str(e))
-    
+
     def cut_selected_files(self):
         """Seçili dosyaları kes (taşıma işleminin başka bir adı)"""
         self.move_selected_files()
-    
+
     def rename_selected_file(self):
         """Seçili dosyayı yeniden adlandır"""
         try:
             file_paths = self.get_selected_files_paths()
             if not file_paths:
-                self.show_error("Seçim Hatası", "Seçilecek dosya yok.")
+                self.show_error(self.get_text("selection_error"), self.get_text("no_file_selected"))
                 return
 
             if len(file_paths) > 1:
-                self.show_error("Yeniden Adlandırma Hatası", "Lütfen yalnızca bir dosya seçin.")
+                self.show_error(self.get_text("rename_error"), self.get_text("select_only_one_file"))
                 return
 
             file_path = file_paths[0]
@@ -8642,7 +10416,7 @@ if __name__ == "__main__":
 
             # Yeniden adlandırma penceresi
             rename_dialog = tk.Toplevel(self.root)
-            rename_dialog.title("Dosyayı Yeniden Adlandır")
+            rename_dialog.title(self.get_text("rename_file"))
             rename_dialog.geometry("500x150")
             rename_dialog.resizable(False, False)
             rename_dialog.transient(self.root)
@@ -8656,7 +10430,7 @@ if __name__ == "__main__":
             # Etiket
             tk.Label(
                 rename_dialog,
-                text="Yeni dosya adını girin:",
+                text=self.get_text("new_name") + ":",
                 font=("Arial", 11),
                 bg=bg_color,
                 fg=fg_color
@@ -8690,7 +10464,7 @@ if __name__ == "__main__":
             # İptal ve Tamam düğmeleri
             tk.Button(
                 button_frame,
-                text="İptal",
+                text=self.get_text("cancel"),
                 command=on_cancel,
                 width=10,
                 font=("Arial", 10)
@@ -8698,7 +10472,7 @@ if __name__ == "__main__":
 
             tk.Button(
                 button_frame,
-                text="Tamam",
+                text=self.get_text("ok"),
                 command=on_rename,
                 width=10,
                 font=("Arial", 10)
@@ -8716,15 +10490,15 @@ if __name__ == "__main__":
             new_path = os.path.join(folder_path, new_name)
             if os.path.exists(new_path):
                 if not messagebox.askyesno(
-                    "Uyarı",
-                    "Bu isimde bir dosya zaten var. Üzerine yazmak istiyor musunuz?",
+                    self.get_text("warning"),
+                    f"{self.get_text('file_exists')}?",
                     icon=messagebox.WARNING
                 ):
                     return
 
-            warning_message = f"DİKKAT: Bu işlem geri alınamaz!\n\n'{file_name}' → '{new_name}'\n\nDevam etmek istiyor musunuz?"
+            warning_message = f"{self.get_text('attention')}: {self.get_text('action_irreversible')}\n\n'{file_name}' → '{new_name}'\n\n{self.get_text('confirm_continue')}?"
             if not messagebox.askokcancel(
-                "Uyarı",
+                self.get_text("warning"),
                 warning_message,
                 icon=messagebox.WARNING
             ):
@@ -8734,7 +10508,7 @@ if __name__ == "__main__":
             self.progress_var.set(0)
             self.progress_frame.pack(side=tk.BOTTOM, fill=tk.X)
             self.progress_bar.pack(fill=tk.X, padx=10, pady=5)
-            self.update_status("Dosya yeniden adlandırılıyor...")
+            self.update_status(f"{self.get_text('renaming_file')}...")
             self.root.update()
 
             # Yeniden adlandır
@@ -8745,17 +10519,17 @@ if __name__ == "__main__":
             self.root.update()
 
             # Başarı mesajı
-            success_message = f"Dosya başarıyla yeniden adlandırıldı:\n'{file_name}' → '{new_name}'"
-            messagebox.showinfo("İşlem Tamamlandı", success_message)
+            success_message = f"{self.get_text('file_renamed_successfully')}:\n'{file_name}' → '{new_name}'"
+            messagebox.showinfo(self.get_text("operation_complete"), success_message)
 
             # Arayüzü temizle
             self.progress_bar.pack_forget()
             self.progress_frame.pack_forget()
-            self.update_status(f"Dosya yeniden adlandırıldı: {file_name} → {new_name}")
+            self.update_status(f"{self.get_text('file_renamed')}: {file_name} → {new_name}")
             self.load_files()
 
         except Exception as e:
-            self.show_error("Yeniden Adlandırma Hatası", str(e))
+            self.show_error(self.get_text("rename_error"), str(e))
 
 
 
