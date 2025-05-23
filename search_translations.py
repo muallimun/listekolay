@@ -468,6 +468,377 @@ context_menu_translations = {
         "ar": "تم إعادة تسمية الملف بنجاح"
     },
     
+    # Context menu translations for file operations
+    "open_file": {
+        "tr": "Dosyayı Aç",
+        "en": "Open File",
+        "de": "Datei öffnen",
+        "fr": "Ouvrir le fichier",
+        "ru": "Открыть файл",
+        "es": "Abrir archivo",
+        "it": "Apri file",
+        "fa": "باز کردن فایل",
+        "ur": "فائل کھولیں",
+        "hi": "फ़ाइल खोलें",
+        "zh": "打开文件",
+        "ja": "ファイルを開く",
+        "ar": "فتح الملف"
+    },
+    
+    "preview_file": {
+        "tr": "Dosyayı Önizle",
+        "en": "Preview File",
+        "de": "Datei-Vorschau",
+        "fr": "Aperçu du fichier",
+        "ru": "Предварительный просмотр файла",
+        "es": "Vista previa del archivo",
+        "it": "Anteprima file",
+        "fa": "پیش نمایش فایل",
+        "ur": "فائل کا پیش منظر",
+        "hi": "फ़ाइल पूर्वावलोकन",
+        "zh": "预览文件",
+        "ja": "ファイルプレビュー",
+        "ar": "معاينة الملف"
+    },
+    
+    "copy_filename": {
+        "tr": "Dosya Adını Kopyala",
+        "en": "Copy Filename",
+        "de": "Dateiname kopieren",
+        "fr": "Copier le nom du fichier",
+        "ru": "Копировать имя файла",
+        "es": "Copiar nombre de archivo",
+        "it": "Copia nome file",
+        "fa": "کپی نام فایل",
+        "ur": "فائل کا نام کاپی کریں",
+        "hi": "फ़ाइल नाम कॉपी करें",
+        "zh": "复制文件名",
+        "ja": "ファイル名をコピー",
+        "ar": "نسخ اسم الملف"
+    },
+    
+    "copy_filepath": {
+        "tr": "Dosya Yolunu Kopyala",
+        "en": "Copy File Path",
+        "de": "Dateipfad kopieren",
+        "fr": "Copier le chemin du fichier",
+        "ru": "Копировать путь к файлу",
+        "es": "Copiar ruta de archivo",
+        "it": "Copia percorso file",
+        "fa": "کپی مسیر فایل",
+        "ur": "فائل کا راستہ کاپی کریں",
+        "hi": "फ़ाइल पथ कॉपी करें",
+        "zh": "复制文件路径",
+        "ja": "ファイルパスをコピー",
+        "ar": "نسخ مسار الملف"
+    },
+    
+    "delete_file": {
+        "tr": "Dosyayı Sil",
+        "en": "Delete File",
+        "de": "Datei löschen",
+        "fr": "Supprimer le fichier",
+        "ru": "Удалить файл",
+        "es": "Eliminar archivo",
+        "it": "Elimina file",
+        "fa": "حذف فایل",
+        "ur": "فائل کو ڈیلیٹ کریں",
+        "hi": "फ़ाइल हटाएं",
+        "zh": "删除文件",
+        "ja": "ファイルを削除",
+        "ar": "حذف الملف"
+    },
+    
+    "copy_file": {
+        "tr": "Dosyayı Kopyala",
+        "en": "Copy File",
+        "de": "Datei kopieren",
+        "fr": "Copier le fichier",
+        "ru": "Копировать файл",
+        "es": "Copiar archivo",
+        "it": "Copia file",
+        "fa": "کپی فایل",
+        "ur": "فائل کاپی کریں",
+        "hi": "फ़ाइल कॉपी करें",
+        "zh": "复制文件",
+        "ja": "ファイルをコピー",
+        "ar": "نسخ الملف"
+    },
+    
+    "move_file": {
+        "tr": "Dosyayı Taşı",
+        "en": "Move File",
+        "de": "Datei verschieben",
+        "fr": "Déplacer le fichier",
+        "ru": "Переместить файл",
+        "es": "Mover archivo",
+        "it": "Sposta file",
+        "fa": "انتقال فایل",
+        "ur": "فائل کو منتقل کریں",
+        "hi": "फ़ाइल स्थानांतरित करें",
+        "zh": "移动文件",
+        "ja": "ファイルを移動",
+        "ar": "نقل الملف"
+    },
+    
+    "rename_file": {
+        "tr": "Dosyayı Yeniden Adlandır",
+        "en": "Rename File",
+        "de": "Datei umbenennen",
+        "fr": "Renommer le fichier",
+        "ru": "Переименовать файл",
+        "es": "Renombrar archivo",
+        "it": "Rinomina file",
+        "fa": "تغییر نام فایل",
+        "ur": "فائل کا نام تبدیل کریں",
+        "hi": "फ़ाइल का नाम बदलें",
+        "zh": "重命名文件",
+        "ja": "ファイル名を変更",
+        "ar": "إعادة تسمية الملف"
+    },
+    
+    "open_file_location": {
+        "tr": "Dosya Konumunu Aç",
+        "en": "Open File Location",
+        "de": "Dateispeicherort öffnen",
+        "fr": "Ouvrir l'emplacement du fichier",
+        "ru": "Открыть расположение файла",
+        "es": "Abrir ubicación del archivo",
+        "it": "Apri posizione file",
+        "fa": "باز کردن مکان فایل",
+        "ur": "فائل کی جگہ کھولیں",
+        "hi": "फ़ाइल स्थान खोलें",
+        "zh": "打开文件位置",
+        "ja": "ファイルの場所を開く",
+        "ar": "فتح موقع الملف"
+    },
+    
+    "select_all_files": {
+        "tr": "Tüm Dosyaları Seç",
+        "en": "Select All Files",
+        "de": "Alle Dateien auswählen",
+        "fr": "Sélectionner tous les fichiers",
+        "ru": "Выбрать все файлы",
+        "es": "Seleccionar todos los archivos",
+        "it": "Seleziona tutti i file",
+        "fa": "انتخاب همه فایل‌ها",
+        "ur": "تمام فائلوں کو منتخب کریں",
+        "hi": "सभी फ़ाइलों का चयन करें",
+        "zh": "选择所有文件",
+        "ja": "すべてのファイルを選択",
+        "ar": "تحديد جميع الملفات"
+    },
+    
+    "cut_file": {
+        "tr": "Dosyayı Kes",
+        "en": "Cut File",
+        "de": "Datei ausschneiden",
+        "fr": "Couper le fichier",
+        "ru": "Вырезать файл",
+        "es": "Cortar archivo",
+        "it": "Taglia file",
+        "fa": "برش فایل",
+        "ur": "فائل کاٹیں",
+        "hi": "फ़ाइल काटें",
+        "zh": "剪切文件",
+        "ja": "ファイルを切り取り",
+        "ar": "قص الملف"
+    },
+    
+    # Dialog button translations - NEW ADDITION
+    "ok": {
+        "tr": "Tamam",
+        "en": "OK",
+        "de": "OK",
+        "fr": "OK",
+        "ru": "ОК",
+        "es": "Aceptar",
+        "it": "OK",
+        "fa": "تأیید",
+        "ur": "ٹھیک ہے",
+        "hi": "ठीक",
+        "zh": "确定",
+        "ja": "OK",
+        "ar": "موافق"
+    },
+    
+    "rename": {
+        "tr": "Yeniden Adlandır",
+        "en": "Rename",
+        "de": "Umbenennen",
+        "fr": "Renommer",
+        "ru": "Переименовать",
+        "es": "Renombrar",
+        "it": "Rinomina",
+        "fa": "تغییر نام",
+        "ur": "نام تبدیل کریں",
+        "hi": "नाम बदलें",
+        "zh": "重命名",
+        "ja": "名前を変更",
+        "ar": "إعادة تسمية"
+    },
+    
+    "new_name": {
+        "tr": "Yeni İsim",
+        "en": "New Name",
+        "de": "Neuer Name",
+        "fr": "Nouveau nom",
+        "ru": "Новое имя",
+        "es": "Nuevo nombre",
+        "it": "Nuovo nome",
+        "fa": "نام جدید",
+        "ur": "نیا نام",
+        "hi": "नया नाम",
+        "zh": "新名称",
+        "ja": "新しい名前",
+        "ar": "الاسم الجديد"
+    },
+    
+    "current_name": {
+        "tr": "Mevcut İsim",
+        "en": "Current Name",
+        "de": "Aktueller Name",
+        "fr": "Nom actuel",
+        "ru": "Текущее имя",
+        "es": "Nombre actual",
+        "it": "Nome attuale",
+        "fa": "نام فعلی",
+        "ur": "موجودہ نام",
+        "hi": "वर्तमान नाम",
+        "zh": "当前名称",
+        "ja": "現在の名前",
+        "ar": "الاسم الحالي"
+    },
+    
+    # Complete dialog button translations for all functions
+    "yes": {
+        "tr": "Evet",
+        "en": "Yes",
+        "de": "Ja",
+        "fr": "Oui",
+        "ru": "Да",
+        "es": "Sí",
+        "it": "Sì",
+        "fa": "بله",
+        "ur": "ہاں",
+        "hi": "हां",
+        "zh": "是",
+        "ja": "はい",
+        "ar": "نعم"
+    },
+    
+    "no": {
+        "tr": "Hayır",
+        "en": "No",
+        "de": "Nein",
+        "fr": "Non",
+        "ru": "Нет",
+        "es": "No",
+        "it": "No",
+        "fa": "خیر",
+        "ur": "نہیں",
+        "hi": "नहीं",
+        "zh": "否",
+        "ja": "いいえ",
+        "ar": "لا"
+    },
+    
+    "operation_complete": {
+        "tr": "İşlem Tamamlandı",
+        "en": "Operation Complete",
+        "de": "Vorgang abgeschlossen",
+        "fr": "Opération terminée",
+        "ru": "Операция завершена",
+        "es": "Operación completada",
+        "it": "Operazione completata",
+        "fa": "عملیات تکمیل شد",
+        "ur": "عمل مکمل ہوا",
+        "hi": "कार्य पूर्ण",
+        "zh": "操作完成",
+        "ja": "操作完了",
+        "ar": "تمت العملية"
+    },
+    
+    "filename_cannot_be_empty": {
+        "tr": "Dosya adı boş olamaz",
+        "en": "Filename cannot be empty",
+        "de": "Dateiname darf nicht leer sein",
+        "fr": "Le nom de fichier ne peut pas être vide",
+        "ru": "Имя файла не может быть пустым",
+        "es": "El nombre del archivo no puede estar vacío",
+        "it": "Il nome del file non può essere vuoto",
+        "fa": "نام فایل نمی‌تواند خالی باشد",
+        "ur": "فائل کا نام خالی نہیں ہو سکتا",
+        "hi": "फ़ाइल नाम खाली नहीं हो सकता",
+        "zh": "文件名不能为空",
+        "ja": "ファイル名は空にできません",
+        "ar": "لا يمكن أن يكون اسم الملف فارغاً"
+    },
+    
+    "file_already_exists": {
+        "tr": "Bu isimde bir dosya zaten var",
+        "en": "A file with this name already exists",
+        "de": "Eine Datei mit diesem Namen existiert bereits",
+        "fr": "Un fichier avec ce nom existe déjà",
+        "ru": "Файл с таким именем уже существует",
+        "es": "Ya existe un archivo con este nombre",
+        "it": "Esiste già un file con questo nome",
+        "fa": "فایلی با این نام از قبل وجود دارد",
+        "ur": "اس نام سے فائل پہلے سے موجود ہے",
+        "hi": "इस नाम से फ़ाइल पहले से मौजود है",
+        "zh": "此名称的文件已存在",
+        "ja": "この名前のファイルは既に存在します",
+        "ar": "يوجد ملف بهذا الاسم بالفعل"
+    },
+    
+    "error_renaming_file": {
+        "tr": "Dosya yeniden adlandırılırken hata oluştu",
+        "en": "Error renaming file",
+        "de": "Fehler beim Umbenennen der Datei",
+        "fr": "Erreur lors du renommage du fichier",
+        "ru": "Ошибка при переименовании файла",
+        "es": "Error al renombrar el archivo",
+        "it": "Errore nel rinominare il file",
+        "fa": "خطا در تغییر نام فایل",
+        "ur": "فائل کا نام تبدیل کرنے میں خرابی",
+        "hi": "फ़ाइल का नाम बदलने में त्रुटि",
+        "zh": "重命名文件时出错",
+        "ja": "ファイル名の変更中にエラー",
+        "ar": "خطأ في إعادة تسمية الملف"
+    },
+    
+    "renaming_file": {
+        "tr": "Dosya yeniden adlandırılıyor",
+        "en": "Renaming file",
+        "de": "Datei wird umbenannt",
+        "fr": "Renommage du fichier",
+        "ru": "Переименование файла",
+        "es": "Renombrando archivo",
+        "it": "Rinominando file",
+        "fa": "تغییر نام فایل",
+        "ur": "فائل کا نام تبدیل ہو رہا ہے",
+        "hi": "फ़ाइल का नाम बदला जा रहा है",
+        "zh": "正在重命名文件",
+        "ja": "ファイル名を変更中",
+        "ar": "جاري إعادة تسمية الملف"
+    },
+    
+    "file_renamed": {
+        "tr": "Dosya yeniden adlandırıldı",
+        "en": "File renamed",
+        "de": "Datei umbenannt",
+        "fr": "Fichier renommé",
+        "ru": "Файл переименован",
+        "es": "Archivo renombrado",
+        "it": "File rinominato",
+        "fa": "فایل تغییر نام یافت",
+        "ur": "فائل کا نام تبدیل ہو گیا",
+        "hi": "फ़ाइल का नाम बदल दिया गया",
+        "zh": "文件已重命名",
+        "ja": "ファイル名が変更されました",
+        "ar": "تم إعادة تسمية الملف"
+    },
+    
     # Error messages for file operations
     "selection_error": {
         "tr": "Seçim Hatası",

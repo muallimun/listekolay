@@ -108,7 +108,7 @@ LIGHT_MODE_COLORS = {
     "btn_active_fg": "#ffffff",  # Buton aktif yazı rengi
 
     # Ortak renkler
-    "button_text": "#ffffff",     # Açık temada buton metinleri beyaz
+    "button_text": "#000000",     # Açık temada buton metinleri siyah
     "highlight": "#f8f9fa",       # Çok açık gri vurgu
     "border": "#ced4da",          # Açık gri kenarlık
     "error": "#dc3545",           # Kırmızı hata
@@ -225,6 +225,9 @@ try:
                 "ru": "Предварительный просмотр файла",
                 "es": "Vista previa del archivo",
                 "it": "Anteprima file",
+                "fa": "پیش نمایش فایل",
+                "ur": "فائل کا پیش منظر",
+                "hi": "फ़ाइल पूर्वावलोकन",
                 "zh": "预览文件",
                 "ja": "ファイルプレビュー",
                 "ar": "معاينة الملف"
@@ -237,6 +240,9 @@ try:
                 "ru": "Удалить файл",
                 "es": "Eliminar archivo",
                 "it": "Elimina file",
+                "fa": "حذف فایل",
+                "ur": "فائل کو ڈیلیٹ کریں",
+                "hi": "फ़ाइल हटाएं",
                 "zh": "删除文件",
                 "ja": "ファイルを削除",
                 "ar": "حذف الملف"
@@ -1206,7 +1212,8 @@ class FileManagerApp:
                 
         # Special case for context menu items - use our centralized context menu translations
         if key in ["preview_file", "delete_files", "copy_files", "move_files", "rename_file", "select_all_files", 
-                  "updating_preview", "do_you_want_to_delete", "copied_to_clipboard", "rename_error",
+                  "delete_file", "copy_file", "move_file", "cut_file", "open_file", "open_file_location",
+                  "copy_filename", "copy_filepath", "updating_preview", "do_you_want_to_delete", "copied_to_clipboard", "rename_error",
                   "large_file_warning", "large_file_slow", "loading_large_file", "view_changed_to_list", 
                   "preview_not_available"]:
             # Varsayılan değerler (fallback) tanımla - herhangi bir hata durumunda bunlar kullanılacak
@@ -1215,6 +1222,14 @@ class FileManagerApp:
                 "delete_files": "Delete Files",
                 "copy_files": "Copy Files",
                 "move_files": "Move Files",
+                "delete_file": "Delete File",
+                "copy_file": "Copy File",
+                "move_file": "Move File",
+                "cut_file": "Cut File",
+                "open_file": "Open File",
+                "open_file_location": "Open File Location",
+                "copy_filename": "Copy Filename",
+                "copy_filepath": "Copy File Path",
                 "rename_file": "Rename File",
                 "select_all_files": "Select All Files",
                 "updating_preview": "Updating preview...",
@@ -1229,6 +1244,11 @@ class FileManagerApp:
             }
             
             try:
+                # search_translations modülündeki global sözlükten çeviri al
+                from search_translations import search_translations as st_dict
+                if key in st_dict and self.current_language in st_dict[key]:
+                    return st_dict[key][self.current_language]
+                
                 # Çeviri varsa kullan
                 if key in context_menu_translations:
                     # Mevcut dilde varsa onu kullan
@@ -1352,6 +1372,8 @@ class FileManagerApp:
         )
         self.create_tooltip(dark_radio, self.get_text("dark_mode"))
         dark_radio.pack(side=tk.LEFT)
+
+
 
         # Top controls frame (folder selection, action buttons)
         top_frame = tk.Frame(
@@ -2060,6 +2082,23 @@ class FileManagerApp:
         )
         # Pack işlemini dosya işlemleri sırasında yapacağız
 
+        # Info icon button for website link - sol altta
+        info_btn = tk.Button(
+            status_frame,
+            text="ℹ️",  # Info emoji
+            command=lambda: self.open_website("https://www.muallimun.com/listekolay/"),
+            font=("Segoe UI", 14, "bold"),  # Daha büyük font
+            bg="#e9ecef",
+            fg="#007bff",  # Mavi renk
+            activebackground="#e9ecef",
+            activeforeground="#0056b3",  # Koyu mavi hover
+            bd=0,
+            width=3,
+            relief=tk.FLAT
+        )
+        self.create_tooltip(info_btn, "ListeKolay web sitesi")
+        info_btn.pack(side=tk.LEFT, padx=(10, 5))
+
         self.status_var = tk.StringVar(value=self.get_text("ready"))
         status_label = tk.Label(
             status_frame, 
@@ -2071,7 +2110,9 @@ class FileManagerApp:
             padx=10,
             pady=5
         )
-        status_label.pack(fill=tk.X)
+        status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+
 
         # Tips panel - now at the bottom of left column with enhanced styling
         self.tips_frame = tk.LabelFrame(
@@ -2334,25 +2375,25 @@ class FileManagerApp:
 
         # Delete files option
         self.context_menu.add_command(
-            label=self.get_text("delete_files"),
+            label=self.get_text("delete_file"),
             command=self.delete_selected_files
         )
 
         # Copy files option
         self.context_menu.add_command(
-            label=self.get_text("copy_files"),
+            label=self.get_text("copy_file"),
             command=self.copy_selected_files
         )
 
         # Move files option
         self.context_menu.add_command(
-            label=self.get_text("move_files"),
+            label=self.get_text("move_file"),
             command=self.move_selected_files
         )
 
         # Cut files option
         self.context_menu.add_command(
-            label=self.get_text("cut_files"),
+            label=self.get_text("cut_file"),
             command=self.cut_selected_files
         )
 
@@ -3182,27 +3223,67 @@ class FileManagerApp:
                     activeforeground=theme["text"]
                 )
 
-            # AÇIK MOD: Butonların görünürlük sorunu için özel işlem
-            if not is_dark:
-                # Önemli butonları özellikle güncelle (saydam ve beyaz metin sorununu gider)
-                for btn_name in ['start_btn', 'select_folder_btn', 'cancel_btn', 'apply_filter_btn']:
-                    if hasattr(self, btn_name):
-                        btn = getattr(self, btn_name)
-                        # Buton arkaplan rengini tema rengine göre güncelle
-                        current_bg = btn.cget("bg")
-                        if current_bg == "" or current_bg.lower() == "#ffffff":  # Boş veya beyaz renk
-                            # Buton türüne özel arka plan rengi belirle
-                            if btn_name == 'start_btn':
-                                btn.configure(bg=theme["start_button"], fg=theme["button_text"])
-                            elif btn_name == 'select_folder_btn': 
-                                btn.configure(bg=theme["folder_button"], fg=theme["button_text"])
-                            elif btn_name == 'cancel_btn':
-                                btn.configure(bg=theme["cancel_button"], fg=theme["button_text"])
-                            elif btn_name == 'apply_filter_btn':
-                                btn.configure(bg=theme["filter_button"], fg=theme["button_text"])
-                            else:
-                                # Genel buton rengi
-                                btn.configure(bg=theme["button"], fg=theme["button_text"])
+            # TÜM BUTONLARI ve METİNLERİ ZORLA GÜNCELLE - Tema geçiş sorununu çözer
+            # Bu bölüm hem açık hem koyu mod için çalışır
+            all_buttons = []
+            all_labels = []
+            
+            # Tüm buton ve label widget'ları topla
+            def collect_widgets(widget):
+                for child in widget.winfo_children():
+                    if isinstance(child, tk.Button):
+                        all_buttons.append(child)
+                    elif isinstance(child, tk.Label):
+                        all_labels.append(child)
+                    # Alt widget'ları da tara
+                    collect_widgets(child)
+            
+            collect_widgets(self.main_frame)
+            
+            # Tüm butonları zorla güncelle
+            for btn in all_buttons:
+                try:
+                    btn.configure(fg=theme["button_text"], 
+                                activeforeground=theme["button_text"],
+                                bg=theme.get("button", theme["bg"]))
+                except:
+                    pass
+            
+            # Tüm label'ları zorla güncelle  
+            for label in all_labels:
+                try:
+                    current_fg = label.cget("fg")
+                    # Gri placeholder metinler hariç, diğer tüm metinleri güncelle
+                    if current_fg != "gray" and current_fg != "grey":
+                        label.configure(fg=theme["text"])
+                except:
+                    pass
+            
+            # Önemli butonları özellikle güncelle
+            for btn_name in ['start_btn', 'select_folder_btn', 'cancel_btn', 'apply_filter_btn', 
+                           'select_all_btn', 'clear_all_btn', 'exit_btn', 'show_filter_btn']:
+                if hasattr(self, btn_name):
+                    btn = getattr(self, btn_name)
+                    try:
+                        # Buton türüne özel arka plan rengi belirle
+                        if btn_name == 'start_btn':
+                            btn.configure(bg=theme["start_button"], fg=theme["button_text"],
+                                        activeforeground=theme["button_text"])
+                        elif btn_name == 'select_folder_btn': 
+                            btn.configure(bg=theme["folder_button"], fg=theme["button_text"],
+                                        activeforeground=theme["button_text"])
+                        elif btn_name == 'cancel_btn':
+                            btn.configure(bg=theme["cancel_button"], fg=theme["button_text"],
+                                        activeforeground=theme["button_text"])
+                        elif btn_name == 'apply_filter_btn':
+                            btn.configure(bg=theme["filter_button"], fg=theme["button_text"],
+                                        activeforeground=theme["button_text"])
+                        else:
+                            # Genel buton rengi
+                            btn.configure(bg=theme["button"], fg=theme["button_text"],
+                                        activeforeground=theme["button_text"])
+                    except:
+                        pass
 
             # Config dosyasına kaydet
             self.save_config()
@@ -3252,15 +3333,19 @@ class FileManagerApp:
                 # AYDIRLIK MOD: Beyaz metinli saydam butonlar sorununu çöz
                 is_dark_mode = self.is_dark_mode.get()
 
-                # Filtreleme bölümündeki butonlar için özel işlem
+                # KRITIK DÜZELTME: Tüm butonların metin renklerini ZORUNLU olarak güncelle
+                # Açık temada beyaz metin sorununu tamamen çözer
+                
                 if button_text == self.get_text("select_all") or button_text == self.get_text("clear_all") or button_text == self.get_text("apply_filter") or button_text == "🔍" or button_text == self.get_text("filter_label"):
-                    # Bu butonlar için siyah/beyaz metin rengi (temaya bağlı)
-                    if parent.cget("fg") != theme["text"]:
-                        parent.configure(fg=theme["text"])
+                    # Bu butonlar için siyah/beyaz metin rengi (temaya bağlı) - ZORUNLU GÜNCELLEME
+                    parent.configure(fg=theme["text"], activeforeground=theme["text"])
                 else:
-                    # Diğer butonlar için standart buton metin rengi
-                    if parent.cget("fg") != theme["button_text"]:
-                        parent.configure(fg=theme["button_text"])
+                    # Diğer butonlar için standart buton metin rengi - ZORUNLU GÜNCELLEME
+                    parent.configure(fg=theme["button_text"], activeforeground=theme["button_text"])
+                
+                # EKSTRA GÜVENCE: Açık temada beyaz metin kalmasını önle
+                if not is_dark_mode and parent.cget("fg") in ["white", "#ffffff", "#FFFFFF"]:
+                    parent.configure(fg=theme["button_text"], activeforeground=theme["button_text"])
 
                 # Buton türlerine göre renk atamaları
                 if "✖️ Kapat" in button_text or "❌" in button_text:
