@@ -4,3 +4,4 @@ openpyxl
 python-docx
 pdf2image
 PyMuPDF
+ffmpeg 
