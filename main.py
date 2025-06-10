@@ -239,7 +239,7 @@ class FileManagerApp:
         self.current_language = "en"  # Default language is English
 
         # Uygulama sürüm bilgisi
-        self.current_version = "5.4.0"
+        self.current_version = "5.4.1"
         self.github_version_url = "https://github.com/muallimun/listekolay/raw/main/listekolay_version.txt"
         self.github_download_url = "https://github.com/muallimun/listekolay/releases/latest"
 
@@ -252,23 +252,6 @@ class FileManagerApp:
 
         # Tema ayarları (açık/koyu mod)
         self.is_dark_mode = tk.BooleanVar(value=False)  # Varsayılan olarak açık mod
-
-        # Add custom translations for pagination
-        self.pagination_translations = {
-            "tr": {"page": "Sayfa", "prev_page": "Önceki", "next_page": "Sonraki"},
-            "en": {"page": "Page", "prev_page": "Previous", "next_page": "Next"},
-            "ar": {"page": "صفحة", "prev_page": "السابق", "next_page": "التالي"},
-            "de": {"page": "Seite", "prev_page": "Zurück", "next_page": "Weiter"},
-            "fr": {"page": "Page", "prev_page": "Précédent", "next_page": "Suivant"},
-            "ru": {"page": "Страница", "prev_page": "Предыдущая", "next_page": "Следующая"},
-            "es": {"page": "Página", "prev_page": "Anterior", "next_page": "Siguiente"},
-            "it": {"page": "Pagina", "prev_page": "Precedente", "next_page": "Successiva"},
-            "zh": {"page": "页面", "prev_page": "上一页", "next_page": "下一页"},
-            "ja": {"page": "ページ", "prev_page": "前へ", "next_page": "次へ"},
-            "hi": {"page": "पृष्ठ", "prev_page": "पिछला", "next_page": "अगला"},
-            "ur": {"page": "صفحہ", "prev_page": "پچھلا", "next_page": "اگلا"},
-            "fa": {"page": "صفحه", "prev_page": "قبلی", "next_page": "بعدی"},
-        }
 
         # Initialize translations from the global translations dict
         self.languages = translations
@@ -1300,18 +1283,20 @@ class FileManagerApp:
         status_frame = tk.Frame(self.main_frame, bg="#e9ecef", height=25)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(10, 0))
 
-        # İlerleme çubuğu için frame - önce tanımlıyoruz, görünmez durumda
-        self.progress_frame = tk.Frame(status_frame, bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"])
+        # İlerleme çubuğu için frame - status_frame içinde
+        self.progress_frame = tk.Frame(status_frame, bg=LIGHT_MODE_COLORS["bg"] if not self.is_dark_mode.get() else DARK_MODE_COLORS["bg"], height=8)
+        self.progress_frame.pack(fill=tk.X, side=tk.TOP, padx=10, pady=(0, 5))
+        self.progress_frame.pack_propagate(False)
 
         # İlerleme çubuğu - progress_var ile ilişkilendirilmiş
         self.progress_bar = ttk.Progressbar(
             self.progress_frame, 
             orient=tk.HORIZONTAL, 
-            length=100, 
+            length=300, 
             mode='determinate',
             variable=self.progress_var
         )
-        # Pack işlemini dosya işlemleri sırasında yapacağız
+        self.progress_bar.pack(fill=tk.X, expand=True)
 
         # Info icon button for website link - sol altta
         info_btn = tk.Button(
@@ -1481,6 +1466,37 @@ class FileManagerApp:
 
         # Store update icon reference for tooltip updates
         self.update_icon = update_icon
+
+    def show_progress_bar(self):
+        """İlerleme çubuğunu göster"""
+        if hasattr(self, 'progress_frame'):
+            # Progress frame'i görünür yap
+            self.progress_frame.pack(fill=tk.X, side=tk.TOP, padx=10, pady=(0, 5))
+            
+            # Progress bar'ı sıfırla
+            if hasattr(self, 'progress_var'):
+                self.progress_var.set(0)
+                self.root.update_idletasks()
+
+    def hide_progress_bar(self):
+        """İlerleme çubuğunu gizle"""
+        if hasattr(self, 'progress_frame'):
+            
+            # Progress bar'ı %100'e çıkar
+            if hasattr(self, 'progress_var'):
+                self.progress_var.set(100)
+                self.root.update_idletasks()
+                
+                # 0.5 saniye bekle, sonra gizle
+                self.root.after(500, self._hide_progress_frame)
+            else:
+                # progress_var yoksa direkt gizle
+                self.progress_frame.pack_forget()
+
+    def _hide_progress_frame(self):
+        """Progress frame'i gizleyen yardımcı fonksiyon"""
+        if hasattr(self, 'progress_frame'):
+            self.progress_frame.pack_forget()
 
     def create_file_list_treeview(self, parent):
         # Create frame for file list
@@ -2964,7 +2980,7 @@ class FileManagerApp:
                 self.get_text("error"),
                 f"Error opening folder: {str(e)}"
             )
-
+    
     def create_tooltip(self, widget, text):
         def enter(event):
             # Store tooltip as attribute of widget to avoid global reference issues
@@ -3000,6 +3016,18 @@ class FileManagerApp:
         widget.bind("<Enter>", enter)
         widget.bind("<Leave>", leave)
         widget.bind("<Motion>", motion)
+    
+    def update_preview_navigation_texts(self):
+        """Dil değiştiğinde preview navigation butonlarının metinlerini günceller."""
+        if hasattr(self, "prev_page_btn") and self.prev_page_btn.winfo_exists():
+            self.prev_page_btn.config(text="◄ " + self.get_text("prev_page"))
+        
+        if hasattr(self, "next_page_btn") and self.next_page_btn.winfo_exists():
+            self.next_page_btn.config(text=self.get_text("next_page") + " ►")
+        
+        if hasattr(self, "page_info_label") and self.page_info_label.winfo_exists():
+            total_pages = max(1, (len(self.current_preview_files) + self.preview_items_per_page - 1) // self.preview_items_per_page)
+            self.page_info_label.config(text=f"{self.get_text('page')} {self.preview_page}/{total_pages}")
 
     def change_language(self, event=None):
         # Get the selected language
@@ -3032,6 +3060,9 @@ class FileManagerApp:
 
             # Update view mode button tooltips
             self.update_view_mode_tooltips()
+            
+            # Update preview navigation buttons and label
+            self.update_preview_navigation_texts()
 
             # Update theme radio button tooltips
             self.update_theme_tooltips()
@@ -4336,8 +4367,9 @@ class FileManagerApp:
                 # Filtreleme ve önizleme yüklenmesi tamamlandı, bayrak ayarla
                 self.filtering_complete = True
 
-                # İlerleme çubuğunu sıfırla
+                # İlerleme çubuğunu sıfırla ve gizle
                 self.root.after(0, lambda: self.progress_bar.config(value=0))
+                self.root.after(0, self.hide_progress_bar)
 
                 # İstatistikleri hesapla ve göster
                 stats_message = self._calculate_file_type_statistics()
@@ -6027,6 +6059,7 @@ class FileManagerApp:
 
             # Update the UI to show loading state
             self.root.after(0, lambda: self.update_status(self.get_text("files_loading")))
+            self.root.after(0, self.show_progress_bar)
             self.root.after(0, lambda: self.progress_bar.start(5))
             self.root.after(0, lambda: self.enable_cancel_button())
 
@@ -6263,6 +6296,8 @@ class FileManagerApp:
                 self.progress_bar["value"] = 100
             self.root.after(0, update_progress_value)
             self.root.after(0, lambda: self.disable_cancel_button())
+            # İlerleme çubuğunu 2 saniye sonra gizle
+            self.root.after(2000, self.hide_progress_bar)
 
             # Preview button reference no longer needed with radio buttons
 
@@ -6278,6 +6313,7 @@ class FileManagerApp:
             self.root.after(0, lambda: self.update_status(error_message))
             self.root.after(0, lambda: self.progress_bar.stop())
             self.root.after(0, lambda: self.disable_cancel_button())
+            self.root.after(0, self.hide_progress_bar)
             logging.error(f"Error loading files: {str(e)}")
             messagebox.showerror(self.get_text("error"), error_message)
 
@@ -7378,6 +7414,10 @@ class FileManagerApp:
 
     def export_text_file(self, file_path):
         try:
+            # İlerleme çubuğunu göster
+            self.show_progress_bar()
+            self.progress_var.set(0)
+            
             with open(file_path, 'w', encoding='utf-8') as f:
                 # Write header
                 f.write(f"{self.get_text('file_list')} - {self.selected_folder_path}\n")
@@ -7402,8 +7442,8 @@ class FileManagerApp:
                     # Update progress
                     progress = (i / len(self.filtered_files)) * 100
                     self.root.after(0, lambda p=progress: self.progress_bar.config(value=p))
-                    self.root.after(0, lambda i=i, total=len(self.filtered_files), name=file_info["name"]: 
-                                 self.update_status(self.get_text("file_processed").format(i, total, name)))
+                    self.root.after(0, lambda i=i, total=len(self.filtered_files): 
+                                     self.update_status(f"{i}/{total}"))
 
                     # Write file details
                     f.write(f"{i}. {file_info['name']}\n")
@@ -7413,7 +7453,12 @@ class FileManagerApp:
                     f.write(f"   {self.get_text('creation_date')}: {file_info['created']}\n")
                     f.write(f"   {self.get_text('modification_date')}: {file_info['modified']}\n")
                     f.write("\n")
-
+                    
+                    
+            # İlerleme çubuğunu gizle
+            self.progress_var.set(100)
+            self.hide_progress_bar()
+            
             # Log success
             logging.info(f"Created text file: {file_path}")
             return True
@@ -7427,6 +7472,10 @@ class FileManagerApp:
 
     def export_excel_file(self, file_path):
         try:
+            # İlerleme çubuğunu göster
+            self.show_progress_bar()
+            self.progress_var.set(0)
+            
             # Create a new workbook and select the active sheet
             workbook = Workbook()
             sheet = workbook.active
@@ -7516,8 +7565,8 @@ class FileManagerApp:
                 # Update progress
                 progress = (i / len(self.filtered_files)) * 100
                 self.root.after(0, lambda p=progress: self.progress_bar.config(value=p))
-                self.root.after(0, lambda i=i, total=len(self.filtered_files), name=file_info["name"]: 
-                             self.update_status(self.get_text("file_processed").format(i, total, name)))
+                self.root.after(0, lambda i=i, total=len(self.filtered_files): 
+                                 self.update_status(f"{i}/{total}"))
 
                 # Add file details
                 row = i + 6  # Data starts at row 7 (6+1)
@@ -7565,6 +7614,10 @@ class FileManagerApp:
 
             # Save the workbook
             workbook.save(file_path)
+            
+            # İlerleme çubuğunu gizle
+            self.progress_var.set(100)
+            self.hide_progress_bar()
 
             # Log success
             logging.info(f"Created Excel file: {file_path}")
@@ -7579,6 +7632,10 @@ class FileManagerApp:
 
     def export_word_file(self, file_path):
         try:
+            # İlerleme çubuğunu göster
+            self.show_progress_bar()
+            self.progress_var.set(0)
+            
             # Create a new document
             document = Document()
 
@@ -7609,8 +7666,8 @@ class FileManagerApp:
                 # Update progress
                 progress = (i / len(self.filtered_files)) * 100
                 self.root.after(0, lambda p=progress: self.progress_bar.config(value=p))
-                self.root.after(0, lambda i=i, total=len(self.filtered_files), name=file_info["name"]: 
-                             self.update_status(self.get_text("file_processed").format(i, total, name)))
+                self.root.after(0, lambda i=i, total=len(self.filtered_files): 
+                                 self.update_status(f"{i}/{total}"))
 
                 # Add file details
                 document.add_heading(f"{i}. {file_info['name']}", level=2)
@@ -7643,6 +7700,10 @@ class FileManagerApp:
 
             # Save the document
             document.save(file_path)
+            
+            # İlerleme çubuğunu gizle
+            self.progress_var.set(100)
+            self.hide_progress_bar()
 
             # Log success
             logging.info(f"Created Word file: {file_path}")
@@ -7657,6 +7718,10 @@ class FileManagerApp:
 
     def export_html_file(self, file_path):
         try:
+            # İlerleme çubuğunu göster
+            self.show_progress_bar()
+            self.progress_var.set(0)
+            
             # Make sure files are sorted according to the selected criteria
             self.sort_files()
 
@@ -7705,8 +7770,8 @@ class FileManagerApp:
                     # Update progress
                     progress = (i / len(self.filtered_files)) * 100
                     self.root.after(0, lambda p=progress: self.progress_bar.config(value=p))
-                    self.root.after(0, lambda i=i, total=len(self.filtered_files), name=file_info["name"]: 
-                                 self.update_status(self.get_text("file_processed").format(i, total, name)))
+                    self.root.after(0, lambda i=i, total=len(self.filtered_files): 
+                                     self.update_status(f"{i}/{total}"))
 
                     # Write file details
                     f.write(f"""
@@ -7726,6 +7791,10 @@ class FileManagerApp:
 </body>
 </html>""")
 
+            # İlerleme çubuğunu gizle
+            self.progress_var.set(100)
+            self.hide_progress_bar()
+            
             # Log success
             logging.info(f"Created HTML file: {file_path}")
             return True

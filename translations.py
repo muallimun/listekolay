@@ -84,6 +84,15 @@ translations = {
         "no_files_found": "Hiçbir dosya bulunamadı",
         "open_file_message": "Dosyayı açmak ister misiniz?",
         "update_available_message": "Programın Yeni Bir Güncellemesi Mevcut İndirmek İster misiniz?",
+        "preview_not_supported": "Önizleme desteklenmiyor",
+        "file_processed": "Dosya Hazırlanıyor Lütfen Bekleyiniz.", 
+        "preview_window_title": "Önizleme Penceresi",
+        "current_name": "Geçerli İsim",
+        "rename": "Yeniden Adlandır",
+        "confirm_delete": "Silme Onayı",
+        "information": "Bilgi",
+        "file_deleted": "Dosya silindi",
+        
 
         # Search and filtering
         "search_files": "Dosyaları ara...",
@@ -123,7 +132,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "Alt Klasörler:",
-        "include_label": "Dahil Et",
+        "include_label": "Alt klasörleri dahil et",
         "list_format_label": "Liste Formatı:",
         "save_location_label": "Kaydetme Yeri:",
         "desktop_label": "Masaüstü",
@@ -138,9 +147,9 @@ translations = {
         # Tips
         "tip_1": "Alt klasör kutusunu işaretleyerek tüm alt dizinlerdeki dosyaları tarayabilirsiniz.",
         "tip_3": "Dosyaları isim, boyut veya uzantıya göre sıralayabilirsiniz.",
-        "tip_4": "Oluşturulan listeler varsayılan olarak program klasörüne kaydedilir.",
+        "tip_4": "Listeler, varsayılan olarak Belgeler_ListeKolay_List klasörüne kaydedilir.",
         "tip_5": "Masaüstü seçeneğiyle dosyaları doğrudan masaüstüne kaydedebilirsiniz.",
-        "tip_6": "İşlemi durdurmak için İptal düğmesini kullanın.",
+        "tip_6": "Filtre uygulanmazsa klasördeki tüm dosya türleri listelenir.",
         "tip_preview_formats": "PDF, JPG, PNG, GIF, PSD, AI, EPS dosyaları ön izleme özelliğine sahiptir.",
 
         # Tooltips
@@ -200,11 +209,11 @@ translations = {
         "confirm_delete_message": "Seçilen dosyaları silmek istediğinizden emin misiniz?",
         "delete_error": "Dosya silinirken hata oluştu",
         "files_deleted_successfully": "Seçilen dosyalar başarıyla silindi",
-        "files_copied_to_clipboard": "dosya yolu kopyalandı",
+        "files_copied_to_clipboard": "Dosya yolu kopyalandı",
         "select_destination_folder": "Hedef klasörü seçin",
         "move_error": "Dosya taşınırken hata oluştu",
-        "files_moved_successfully": "dosya başarıyla taşındı",
-        "files_cut_successfully": "dosya kesildi",
+        "files_moved_successfully": "Dosya başarıyla taşındı",
+        "files_cut_successfully": "Dosya kesildi",
         "file_renamed_successfully": "Dosya başarıyla yeniden adlandırıldı",
         "tooltip_website": "ListeKolay Web sitesi",
         "tooltip_updates": "Güncellemeleri Kontrol Et",
@@ -220,9 +229,9 @@ translations = {
         "total_files_label": "Toplam Dosya:",
         "folder_count_label": "Klasör Sayısı:",
         "total_size_label": "Toplam Boyut:",
-        "files": "dosya",
-        "files_found": "dosya bulundu",
-        "files_loaded_message": "dosya yüklendi",
+        "files": "Dosya",
+        "files_found": "Dosya bulundu",
+        "files_loaded_message": "Dosya yüklendi",
         "searching": "Aranıyor",
 
         # Context menu and tooltip translations
@@ -327,11 +336,20 @@ translations = {
         "no_files_found": "No files found",
         "open_file_message": "Would you like to open the file?",
         "update_available_message": "A new update for the program is available. Would you like to download it?",
+        "preview_not_supported": "Preview not supported",
+        "file_processed": "File is being processed, please wait.",
+        "preview_window_title": "Preview Window", 
+        "current_name": "Current Name",
+        "rename": "Rename",
+        "confirm_delete": "Confirm Delete",
+        "information": "Information",
+        "file_deleted": "File deleted",
+
 
         # Search and filtering
         "search_files": "Search files...",
         "search_files_placeholder": "Search files...",
-        "extension_search": "Search:",
+        "extension_search": "Search",
         "files_filtering": "Filtering files, please wait...",
         "filter_applying": "Applying filter...",
         "filter_cancelled": "Filtering operation cancelled",
@@ -366,7 +384,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "Include Subfolders:",
-        "include_label": "Include",
+        "include_label": "Include subfolders",
         "list_format_label": "List Format:",
         "save_location_label": "Save Location:",
         "desktop_label": "Desktop",
@@ -381,9 +399,9 @@ translations = {
         # Tips
         "tip_1": "Check the subfolder box to scan all files in subdirectories.",
         "tip_3": "Files can be sorted by name, size or extension.",
-        "tip_4": "Lists are saved to the program folder by default.",
+        "tip_4": "Lists are saved by default to the Documents_ListeKolay_List folder.",
         "tip_5": "Use the desktop option to save files directly to your desktop.",
-        "tip_6": "Use the Cancel button to stop any operation immediately.",
+        "tip_6": "If no filter is applied, all file types in the folder are listed.",
         "tip_preview_formats": "PDF, JPG, PNG, GIF, PSD, AI, EPS files support preview functionality.",
 
         # Tooltips
@@ -574,11 +592,20 @@ translations = {
         "no_files_found": "لم يتم العثور على ملفات",
         "open_file_message": "هل ترغب في فتح الملف؟",
         "update_available_message": "هناك تحديث جديد للبرنامج. هل ترغب في تنزيله؟",
+        "preview_not_supported_ar": "المعاينة غير مدعومة",
+        "file_processed": "يتم معالجة الملف، يرجى الانتظار.",
+        "preview_window_title": "نافذة المعاينة",
+        "current_name": "الاسم الحالي",
+        "rename": "إعادة تسمية",
+        "confirm_delete": "تأكيد الحذف",
+        "information": "معلومات",
+        "file_deleted": "تم حذف الملف",
+        
 
         # Search and filtering
         "search_files": "ابحث في الملفات...",
         "search_files_placeholder": "ابحث في الملفات...",
-        "extension_search": "بحث:",
+        "extension_search": "بحث",
         "files_filtering": "جارٍ تصفية الملفات، يرجى الانتظار...",
         "filter_applying": "جارٍ تطبيق الفلتر...",
         "filter_cancelled": "تم إلغاء عملية التصفية",
@@ -613,7 +640,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "تضمين المجلدات الفرعية:",
-        "include_label": "تضمين",
+        "include_label": "تضمين المجلدات الفرعية",
         "list_format_label": "صيغة القائمة:",
         "save_location_label": "مكان الحفظ:",
         "desktop_label": "سطح المكتب",
@@ -628,9 +655,9 @@ translations = {
         # Tips
         "tip_1": "حدد خانة المجلدات الفرعية لمسح جميع الملفات في المجلدات الفرعية.",
         "tip_3": "يمكن فرز الملفات حسب الاسم أو الحجم أو الامتداد.",
-        "tip_4": "يتم حفظ القوائم في مجلد البرنامج بشكل افتراضي.",
+        "tip_4": "يتم حفظ القوائم افتراضيًا في مجلد Documents_ListeKolay_List.",
         "tip_5": "استخدم خيار سطح المكتب لحفظ الملفات مباشرة على سطح المكتب.",
-        "tip_6": "استخدم زر الإلغاء لإيقاف أي عملية فورًا.",
+        "tip_6": "إذا لم يتم تطبيق أي فلتر، يتم عرض جميع أنواع الملفات في المجلد",
         "tip_preview_formats": "تدعم ملفات PDF وJPG وPNG وGIF وPSD وAI وEPS وظيفة المعاينة.",
 
         # Tooltips
@@ -821,11 +848,19 @@ translations = {
         "no_files_found": "Keine Dateien gefunden",
         "open_file_message": "Möchten Sie die Datei öffnen?",
         "update_available_message": "Ein neues Update für das Programm ist verfügbar. Möchten Sie es herunterladen?",
+        "preview_not_supported": "Vorschau wird nicht unterstützt",
+        "file_processed": "Datei wird verarbeitet, bitte warten.",
+        "preview_window_title": "Vorschaufenster", 
+        "current_name": "Aktueller Name",
+        "rename": "Umbenennen",
+        "confirm_delete": "Löschen bestätigen",
+        "information": "Information",
+        "file_deleted": "Datei gelöscht",
 
         # Search and filtering
         "search_files": "Dateien suchen...",
         "search_files_placeholder": "Dateien suchen...",
-        "extension_search": "Suche:",
+        "extension_search": "Suche",
         "files_filtering": "Dateien werden gefiltert, bitte warten...",
         "filter_applying": "Filter wird angewendet...",
         "filter_cancelled": "Filtervorgang abgebrochen",
@@ -860,7 +895,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "Unterordner einbeziehen:",
-        "include_label": "Einbeziehen",
+        "include_label": "Unterordner einbeziehen",
         "list_format_label": "Listenformat:",
         "save_location_label": "Speicherort:",
         "desktop_label": "Desktop",
@@ -875,9 +910,9 @@ translations = {
         # Tips
         "tip_1": "Aktivieren Sie die Option für Unterordner, um alle Dateien zu erfassen.",
         "tip_3": "Dateien können nach Name, Größe oder Erweiterung sortiert werden.",
-        "tip_4": "Listen werden standardmäßig im Programmordner gespeichert.",
+        "tip_4": "Listen werden standardmäßig im Ordner Dokumente_ListeKolay_List gespeichert.",
         "tip_5": "Verwenden Sie die Desktop-Option, um direkt auf dem Desktop zu speichern.",
-        "tip_6": "Verwenden Sie die Abbrechen-Schaltfläche, um einen Vorgang sofort zu stoppen.",
+        "tip_6": "Wenn kein Filter angewendet wird, werden alle Dateitypen im Ordner aufgelistet.",
         "tip_preview_formats": "PDF, JPG, PNG, GIF, PSD, AI, EPS-Dateien unterstützen die Vorschaufunktion.",
 
         # Tooltips
@@ -1062,11 +1097,19 @@ translations = {
         "no_files_found": "Aucun fichier trouvé",
         "open_file_message": "Souhaitez-vous ouvrir ce fichier ?",
         "update_available_message": "Une nouvelle mise à jour du programme est disponible. Voulez-vous la télécharger ?",
+        "preview_not_supported": "Aperçu non pris en charge",
+        "file_processed": "Le fichier est en cours de traitement, veuillez patienter.",
+        "preview_window_title": "Fenêtre d’aperçu",
+        "current_name": "Nom actuel",
+        "rename": "Renommer",
+        "confirm_delete": "Confirmer la suppression",
+        "information": "Information",
+        "file_deleted": "Fichier supprimé",
 
         # Search and filtering
         "search_files": "Rechercher des fichiers...",
         "search_files_placeholder": "Rechercher des fichiers...",
-        "extension_search": "Recherche :",
+        "extension_search": "Recherche",
         "files_filtering": "Filtrage des fichiers, veuillez patienter...",
         "filter_applying": "Application du filtre...",
         "filter_cancelled": "Filtrage annulé",
@@ -1101,7 +1144,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "Inclure les sous-dossiers :",
-        "include_label": "Inclure",
+        "include_label": "Inclure les sous-dossiers",
         "list_format_label": "Format de la liste :",
         "save_location_label": "Emplacement d'enregistrement :",
         "desktop_label": "Bureau",
@@ -1116,9 +1159,9 @@ translations = {
         # Tips
         "tip_1": "Cochez la case des sous-dossiers pour inclure tous les fichiers.",
         "tip_3": "Les fichiers peuvent être triés par nom, taille ou extension.",
-        "tip_4": "Les listes sont enregistrées dans le dossier du programme par défaut.",
+        "tip_4": "Les listes sont enregistrées par défaut dans le dossier Documents_ListeKolay_List.",
         "tip_5": "Utilisez l’option bureau pour enregistrer directement sur votre bureau.",
-        "tip_6": "Utilisez le bouton Annuler pour arrêter immédiatement une opération.",
+        "tip_6": "Si aucun filtre n’est appliqué, tous les types de fichiers du dossier sont listés.",
         "tip_preview_formats": "Les fichiers PDF, JPG, PNG, GIF, PSD, AI, EPS prennent en charge l’aperçu.",
 
         # Tooltips
@@ -1309,11 +1352,19 @@ translations = {
         "no_files_found": "Файлы не найдены",
         "open_file_message": "Хотите открыть файл?",
         "update_available_message": "Доступно новое обновление программы. Хотите скачать его?",
+        "preview_not_supported": "Предварительный просмотр не поддерживается",
+        "file_processed": "Файл обрабатывается, пожалуйста, подождите.",
+        "preview_window_title": "Окно предварительного просмотра",
+        "current_name": "Текущее имя",
+        "rename": "Переименовать",
+        "confirm_delete": "Подтвердить удаление",
+        "information": "Информация",
+        "file_deleted": "Файл удалён",
 
         # Search and filtering
         "search_files": "Поиск файлов...",
         "search_files_placeholder": "Поиск файлов...",
-        "extension_search": "Поиск:",
+        "extension_search": "Поиск",
         "files_filtering": "Фильтрация файлов, подождите...",
         "filter_applying": "Применение фильтра...",
         "filter_cancelled": "Фильтрация отменена",
@@ -1348,7 +1399,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "Включить подпапки:",
-        "include_label": "Включить",
+        "include_label": "Включить вложенные папки",
         "list_format_label": "Формат списка:",
         "save_location_label": "Путь сохранения:",
         "desktop_label": "Рабочий стол",
@@ -1363,9 +1414,9 @@ translations = {
         # Tips
         "tip_1": "Отметьте подпапки для сканирования всех вложенных файлов.",
         "tip_3": "Файлы можно сортировать по имени, размеру или расширению.",
-        "tip_4": "Списки по умолчанию сохраняются в папке программы.",
+        "tip_4": "Списки по умолчанию сохраняются в папке Documents_ListeKolay_List.",
         "tip_5": "Используйте рабочий стол для быстрого сохранения.",
-        "tip_6": "Нажмите «Отмена» для мгновенной остановки.",
+        "tip_6": "Если фильтр не применён, отображаются все типы файлов в папке.",
         "tip_preview_formats": "PDF, JPG, PNG, GIF, PSD, AI, EPS поддерживают предпросмотр.",
 
         # Tooltips
@@ -1555,11 +1606,18 @@ translations = {
         "no_files_found": "No se encontraron archivos",
         "open_file_message": "¿Quieres abrir el archivo?",
         "update_available_message": "Hay una nueva actualización del programa disponible. ¿Desea descargarla?",
+        "preview_not_supported": "Vista previa no compatible",
+        "file_processed": "El archivo se está procesando, por favor espere.",
+        "current_name": "Nombre actual",
+        "rename": "Renombrar",
+        "confirm_delete": "Confirmar eliminación",
+        "information": "Información",
+        "file_deleted": "Archivo eliminado",
 
         # Search and filtering
         "search_files": "Buscar archivos...",
         "search_files_placeholder": "Buscar archivos...",
-        "extension_search": "Buscar:",
+        "extension_search": "Buscar",
         "files_filtering": "Filtrando archivos, por favor espera...",
         "filter_applying": "Aplicando filtro...",
         "filter_cancelled": "Operación de filtrado cancelada",
@@ -1594,7 +1652,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "Incluir Subcarpetas:",
-        "include_label": "Incluir",
+        "include_label": "Incluir subcarpetas",
         "list_format_label": "Formato de Lista:",
         "save_location_label": "Ubicación de Guardado:",
         "desktop_label": "Escritorio",
@@ -1609,9 +1667,9 @@ translations = {
         # Tips
         "tip_1": "Marca la casilla de subcarpetas para escanear todos los archivos en subdirectorios.",
         "tip_3": "Los archivos pueden ordenarse por nombre, tamaño o extensión.",
-        "tip_4": "Las listas se guardan en la carpeta del programa por defecto.",
+        "tip_4": "Las listas se guardan por defecto en la carpeta Documentos_ListeKolay_List.",
         "tip_5": "Usa la opción de escritorio para guardar archivos directamente en tu escritorio.",
-        "tip_6": "Usa el botón Cancelar para detener cualquier operación inmediatamente.",
+        "tip_6": "Si no se aplica ningún filtro, se listan todos los tipos de archivos de la carpeta.",
         "tip_preview_formats": "Los archivos PDF, JPG, PNG, GIF, PSD, AI, EPS soportan la función de vista previa.",
 
         # Tooltips
@@ -1801,11 +1859,19 @@ translations = {
         "no_files_found": "Nessun file trovato",
         "open_file_message": "Vuoi aprire il file?",
         "update_available_message": "È disponibile un nuovo aggiornamento del programma. Vuoi scaricarlo?",
+        "preview_not_supported": "Anteprima non supportata",
+        "file_processed": "Il file è in fase di elaborazione, attendere prego.",
+        "preview_window_title": "Finestra di anteprima",
+        "current_name": "Nome corrente",
+        "rename": "Rinomina",
+        "confirm_delete": "Conferma eliminazione",
+        "information": "Informazioni",
+        "file_deleted": "File cancellato",
 
         # Search and filtering
         "search_files": "Cerca file...",
         "search_files_placeholder": "Cerca file...",
-        "extension_search": "Cerca:",
+        "extension_search": "Cerca",
         "files_filtering": "Filtraggio file, attendere...",
         "filter_applying": "Applicazione filtro...",
         "filter_cancelled": "Operazione di filtraggio annullata",
@@ -1840,7 +1906,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "Includi Sottocartelle:",
-        "include_label": "Includi",
+        "include_label": "Includi sottocartelle",
         "list_format_label": "Formato Elenco:",
         "save_location_label": "Posizione Salvataggio:",
         "desktop_label": "Desktop",
@@ -1855,9 +1921,9 @@ translations = {
         # Tips
         "tip_1": "Seleziona la casella delle sottocartelle per scansionare tutti i file nelle sottodirectory.",
         "tip_3": "I file possono essere ordinati per nome, dimensione o estensione.",
-        "tip_4": "Gli elenchi vengono salvati nella cartella del programma per impostazione predefinita.",
+        "tip_4": "Le liste vengono salvate per default nella cartella Documenti_ListeKolay_List.",
         "tip_5": "Usa l'opzione desktop per salvare i file direttamente sul desktop.",
-        "tip_6": "Usa il pulsante Annulla per interrompere immediatamente qualsiasi operazione.",
+        "tip_6": "Se non viene applicato alcun filtro, vengono elencati tutti i tipi di file nella cartella.",
         "tip_preview_formats": "I file PDF, JPG, PNG, GIF, PSD, AI, EPS supportano la funzione di anteprima.",
 
         # Tooltips
@@ -2048,11 +2114,19 @@ translations = {
         "no_files_found": "هیچ فایلی یافت نشد",
         "open_file_message": "می‌خواهید فایل را باز کنید؟",
         "update_available_message": "یک به‌روزرسانی جدید برای برنامه موجود است. مایلید آن را دانلود کنید؟",
+        "preview_not_supported": "پیش‌نمایش پشتیبانی نمی‌شود",
+        "file_processed": "فایل در حال پردازش است، لطفاً صبر کنید.",
+        "preview_window_title": "پنجره پیش‌نمایش",  
+        "current_name": "نام فعلی",
+        "rename": "تغییر نام",
+        "confirm_delete": "تأیید حذف",
+        "information": "اطلاعات",
+        "file_deleted": "فایل حذف شد",
 
         # Search and filtering
         "search_files": "جستجوی فایل‌ها...",
         "search_files_placeholder": "جستجوی فایل‌ها...",
-        "extension_search": "جستجو:",
+        "extension_search": "جستجو",
         "files_filtering": "در حال فیلتر کردن فایل‌ها، لطفا صبر کنید...",
         "filter_applying": "در حال اعمال فیلتر...",
         "filter_cancelled": "عملیات فیلتر لغو شد",
@@ -2087,7 +2161,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "شامل زیرپوشه‌ها:",
-        "include_label": "شامل شود",
+        "include_label": "شامل پوشه‌های فرعی",
         "list_format_label": "فرمت فهرست:",
         "save_location_label": "محل ذخیره:",
         "desktop_label": "دسکتاپ",
@@ -2102,9 +2176,9 @@ translations = {
         # Tips
         "tip_1": "کادر زیرپوشه را علامت بزنید تا همه فایل‌ها در زیرشاخه‌ها اسکن شوند.",
         "tip_3": "فایل‌ها را می‌توان بر اساس نام، حجم یا پسوند مرتب کرد.",
-        "tip_4": "فهرست‌ها به طور پیش‌فرض در پوشه برنامه ذخیره می‌شوند.",
+        "tip_4": "فهرست‌ها به طور پیش‌فرض در پوشه اسناد_ListeKolay_List ذخیره می‌شوند.",
         "tip_5": "از گزینه دسکتاپ برای ذخیره مستقیم فایل‌ها روی دسکتاپ استفاده کنید.",
-        "tip_6": "برای توقف فوری هر عملیات از دکمه لغو استفاده کنید.",
+        "tip_6": "اگر فیلتری اعمال نشود، همه نوع فایل‌ها در پوشه فهرست می‌شوند.",
         "tip_preview_formats": "فرمت‌های PDF، JPG، PNG، GIF، PSD، AI، EPS از پیش‌نمایش پشتیبانی می‌کنند.",
 
         # Tooltips
@@ -2293,11 +2367,19 @@ translations = {
         "no_files_found": "未找到文件",
         "open_file_message": "您想要打开此文件吗？",
         "update_available_message": "程序有可用的新更新。您想下载吗？",
+        "preview_not_supported": "不支持预览",
+        "file_processed": "文件正在处理，请稍候。",
+        "preview_window_title": "预览窗口", 
+        "current_name": "当前名称",
+        "rename": "重命名",
+        "confirm_delete": "确认删除",
+        "information": "信息",
+        "file_deleted": "文件已删除",
 
         # Search and filtering
         "search_files": "搜索文件...",
         "search_files_placeholder": "搜索文件...",
-        "extension_search": "搜索：",
+        "extension_search": "搜索",
         "files_filtering": "正在过滤文件，请稍候...",
         "filter_applying": "正在应用过滤器...",
         "filter_cancelled": "过滤操作已取消",
@@ -2332,7 +2414,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "包含子文件夹：",
-        "include_label": "包含",
+        "include_label": "包含子文件夹",
         "list_format_label": "列表格式：",
         "save_location_label": "保存位置：",
         "desktop_label": "桌面",
@@ -2347,9 +2429,9 @@ translations = {
         # Tips
         "tip_1": "勾选子文件夹选项以扫描所有子目录中的文件。",
         "tip_3": "文件可以按名称、大小或扩展名排序。",
-        "tip_4": "列表默认保存在程序文件夹中。",
+        "tip_4": "列表默认保存在文档_ListeKolay_List文件夹中。",
         "tip_5": "使用桌面选项将文件直接保存到桌面。",
-        "tip_6": "使用取消按钮可立即停止任何操作。",
+        "tip_6": "如果未应用过滤器，将列出文件夹中的所有文件类型。",
         "tip_preview_formats": "PDF、JPG、PNG、GIF、PSD、AI、EPS 文件支持预览功能。",
 
         # Tooltips
@@ -2540,11 +2622,20 @@ translations = {
         "no_files_found": "ファイルが見つかりません",
         "open_file_message": "ファイルを開きますか？",
         "update_available_message": "プログラムの新しいアップデートがあります。ダウンロードしますか？",
+        "preview_not_supported": "プレビューはサポートされていません",
+        "file_processed": "ファイルを処理しています。しばらくお待ちください。",
+        "preview_window_title": "プレビューウィンドウ", 
+        "current_name": "現在の名前",
+        "rename": "名前を変更",
+        "confirm_delete": "削除を確認",
+        "information": "情報",
+        "file_deleted": "ファイルが削除されました",
+
 
         # Search and filtering
         "search_files": "ファイルを検索...",
         "search_files_placeholder": "ファイルを検索...",
-        "extension_search": "検索：",
+        "extension_search": "検索",
         "files_filtering": "ファイルをフィルタリングしています、しばらくお待ちください...",
         "filter_applying": "フィルターを適用中...",
         "filter_cancelled": "フィルタリング操作がキャンセルされました",
@@ -2579,7 +2670,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "サブフォルダーを含む：",
-        "include_label": "含む",
+        "include_label": "サブフォルダーを含める",
         "list_format_label": "リスト形式：",
         "save_location_label": "保存場所：",
         "desktop_label": "デスクトップ",
@@ -2594,9 +2685,9 @@ translations = {
         # Tips
         "tip_1": "サブフォルダーのチェックボックスをオンにすると、サブディレクトリ内のすべてのファイルがスキャンされます。",
         "tip_3": "ファイルは名前、サイズ、拡張子で並べ替え可能です。",
-        "tip_4": "リストはデフォルトでプログラムフォルダーに保存されます。",
+        "tip_4": " リストはデフォルトでドキュメント_ListeKolay_Listフォルダに保存されます。",
         "tip_5": "デスクトップオプションを使うと、ファイルを直接デスクトップに保存できます。",
-        "tip_6": "キャンセルボタンで操作をすぐに停止できます。",
+        "tip_6": "フィルターが適用されていない場合、フォルダー内のすべてのファイルタイプが表示されます。",
         "tip_preview_formats": "PDF、JPG、PNG、GIF、PSD、AI、EPSファイルはプレビュー機能に対応しています。",
 
         # Tooltips
@@ -2784,11 +2875,20 @@ translations = {
         "sorted_by": "کے حساب سے ترتیب دیا گیا:",
         "no_files_found_ur": "کوئی فائل نہیں ملی", 
         "update_available_message": "پروگرام کا نیا اپ ڈیٹ دستیاب ہے۔ کیا آپ اسے ڈاؤن لوڈ کرنا چاہیں گے؟",
+        "preview_not_supported": "پیش نظارہ معاونت یافتہ نہیں ہے",
+        "file_processed": "فائل پروسیس ہو رہی ہے، براہ کرم انتظار کریں۔",
+        "preview_window_title": "پیش نظارہ ونڈو",
+        "current_name": "موجودہ نام",
+        "rename": "نام تبدیل کریں",
+        "confirm_delete": "حذف کی تصدیق کریں",
+        "information": "معلومات",
+        "file_deleted": "فائل حذف ہوگئی",
+        
 
         # Search and filtering
         "search_files": "فائلوں کی تلاش کریں...",
         "search_files_placeholder": "فائلوں کی تلاش کریں...",
-        "extension_search": "تلاش:",
+        "extension_search": "تلاش",
         "files_filtering": "فائلوں کو فلٹر کیا جا رہا ہے، براہ کرم انتظار کریں...",
         "filter_applying": "فلٹر لاگو کیا جا رہا ہے...",
         "filter_cancelled": "فلٹرنگ کا عمل منسوخ کر دیا گیا",
@@ -2823,7 +2923,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "ذیلی فولڈرز شامل کریں:",
-        "include_label": "شامل کریں",
+        "include_label": "ذیلی فولڈرز شامل کریں",
         "list_format_label": "فہرست کا فارمیٹ:",
         "save_location_label": "محفوظ کرنے کی جگہ:",
         "desktop_label": "ڈیسک ٹاپ",
@@ -2838,9 +2938,9 @@ translations = {
         # Tips
         "tip_1": "ذیلی فولڈر کے خانہ کو منتخب کریں تاکہ ذیلی ڈائریکٹریز کی تمام فائلیں اسکین ہوں۔",
         "tip_3": "فائلوں کو نام، حجم یا توسیع کے حساب سے ترتیب دیا جا سکتا ہے۔",
-        "tip_4": "فہرستیں ڈیفالٹ کے طور پر پروگرام فولڈر میں محفوظ کی جاتی ہیں۔",
+        "tip_4": "فہرستیں بطور ڈیفالٹ دستاویزات_ListeKolay_List فولڈر میں محفوظ کی جاتی ہیں۔",
         "tip_5": "فائلوں کو براہ راست اپنے ڈیسک ٹاپ پر محفوظ کرنے کے لیے ڈیسک ٹاپ کا آپشن استعمال کریں۔",
-        "tip_6": "کسی بھی عمل کو فوری روکنے کے لیے منسوخ کریں بٹن استعمال کریں۔",
+        "tip_6": "اگر کوئی فلٹر لاگو نہ ہو تو فولڈر میں موجود تمام فائل اقسام کی فہرست دکھائی جاتی ہے۔",
         "tip_preview_formats": "PDF, JPG, PNG, GIF, PSD, AI, EPS فائلوں میں پریویو کی سہولت موجود ہے۔",
 
         # Tooltips
@@ -3027,11 +3127,19 @@ translations = {
         "sorted_by": "के अनुसार क्रमबद्ध:",
         "no_files_found_hi": "कोई फ़ाइल नहीं मिली", 
         "update_available_message": "प्रोग्राम के लिए एक नया अपडेट उपलब्ध है। क्या आप इसे डाउनलोड करना चाहेंगे?",
+        "preview_not_supported": "पूर्वावलोकन समर्थित नहीं है",
+        "file_processed": "फ़ाइल संसाधित की जा रही है, कृपया प्रतीक्षा करें।",
+        "preview_window_title": "पूर्वावलोकन विंडो", 
+        "current_name": "वर्तमान नाम",
+        "rename": "नाम बदलें",
+        "confirm_delete": "हटाने की पुष्टि करें",
+        "information": "सूचना",
+        "file_deleted": "फ़ाइल हटाई गई",
 
         # Search and filtering
         "search_files": "फ़ाइलें खोजें...",
         "search_files_placeholder": "फ़ाइलें खोजें...",
-        "extension_search": "खोजें:",
+        "extension_search": "खोजें",
         "files_filtering": "फ़ाइलों को फ़िल्टर किया जा रहा है, कृपया प्रतीक्षा करें...",
         "filter_applying": "फ़िल्टर लागू किया जा रहा है...",
         "filter_cancelled": "फ़ाइलों की फिल्टरिंग रद्द कर दी गई",
@@ -3066,7 +3174,7 @@ translations = {
 
         # Settings labels
         "subfolders_label": "उपफ़ोल्डर्स शामिल करें:",
-        "include_label": "शामिल करें",
+        "include_label": " उप-फ़ोल्डर शामिल करें",
         "list_format_label": "सूची प्रारूप:",
         "save_location_label": "सहेजने की जगह:",
         "desktop_label": "डेस्कटॉप",
@@ -3081,9 +3189,9 @@ translations = {
         # Tips
         "tip_1": "उपफ़ोल्डर बॉक्स चेक करें ताकि सभी उपनिर्देशिका की फ़ाइलों की स्कैनिंग हो सके।",
         "tip_3": "फ़ाइलों को नाम, आकार या एक्सटेंशन के अनुसार क्रमबद्ध किया जा सकता है।",
-        "tip_4": "सूचियाँ डिफ़ॉल्ट रूप से प्रोग्राम फ़ोल्डर में सहेजी जाती हैं।",
+        "tip_4": " सूचियाँ डिफ़ॉल्ट रूप से दस्तावेज़_ListeKolay_List फ़ोल्डर में सहेजी जाती हैं।",
         "tip_5": "फ़ाइलों को सीधे अपने डेस्कटॉप पर सहेजने के लिए डेस्कटॉप विकल्प का उपयोग करें।",
-        "tip_6": "किसी भी क्रिया को तुरंत रोकने के लिए रद्द करें बटन का उपयोग करें।",
+        "tip_6": "अगर कोई फ़िल्टर लागू नहीं किया गया है, तो फ़ोल्डर में मौजूद सभी फ़ाइल प्रकार सूचीबद्ध होंगे।",
         "tip_preview_formats": "PDF, JPG, PNG, GIF, PSD, AI, EPS फ़ाइलों के पूर्वावलोकन की सुविधा है।",
 
         # Tooltips
