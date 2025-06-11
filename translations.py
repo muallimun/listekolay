@@ -418,9 +418,9 @@ translations = {
         "tooltip_sort_criteria": "Choose how files will be sorted",
         "tooltip_list_view": "Show files in list view",
         "tooltip_preview_view": "Show files with preview thumbnails",
-        "tooltip_website": "ListeKolay Website",
+        "tooltip_website": "EasyLister Website",
         "tooltip_updates": "Check for Updates",
-        "tooltip_info_icon": "ListeKolay Website",
+        "tooltip_info_icon": "EasyLister Website",
 
         # Dialog messages
         "yes": "Yes",
@@ -434,7 +434,7 @@ translations = {
         "no_update_available": "No Update Available",
 
         # Footer
-        "copyright_footer": "© {year} Muallimun.Net - ListeKolay",
+        "copyright_footer": "© {year} Muallimun.Net - EasyLister",
 
         # Panel toggle
         "toggle_panel": "Show/hide left panel",
@@ -458,13 +458,13 @@ translations = {
         "enter_new_name_for": "Enter new name for",
         "confirm_delete_title": "Confirm Delete",
         "confirm_delete_message": "Are you sure you want to delete the selected files?",
-        "delete_error": "Error occurred while deleting file",
+        "delete_error": "Error occurred While deleting file",
         "files_deleted_successfully": "Selected files deleted successfully",
-        "files_copied_to_clipboard": "file paths copied",
+        "files_copied_to_clipboard": "File paths copied",
         "select_destination_folder": "Select destination folder",
-        "move_error": "Error occurred while moving file",
-        "files_moved_successfully": "files moved successfully",
-        "files_cut_successfully": "files cut",
+        "move_error": "Error occurred While moving file",
+        "files_moved_successfully": "Files moved successfully",
+        "files_cut_successfully": "Files cut",
         "file_renamed_successfully": "File renamed successfully",
         "tooltip_website": "ListeKolay Website",
         "tooltip_updates": "Check for Updates",

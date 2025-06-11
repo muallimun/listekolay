@@ -3263,7 +3263,7 @@ class FileManagerApp:
             
             # Update website and update icon tooltips
             if hasattr(self, 'website_link'):
-                self.create_tooltip(self.website_link, self.get_text("tooltip_website"))
+                self.create_tooltip(self.website_link, self.get_text("tooltip_info_icon"))
             if hasattr(self, 'update_icon'):
                 self.create_tooltip(self.update_icon, self.get_text("check_updates"))
             
