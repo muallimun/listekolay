@@ -1,13 +1,18 @@
 @echo off
 setlocal
 
-:: 1. Sanal ortamı oluştur
-python -m venv env_listekolay
+:: .bat dosyasının bulunduğu klasöre geç
+cd /d "%~dp0"
+
+:: 1. Sanal ortamı oluştur (zaten varsa atla)
+if not exist env_listekolay (
+    python -m venv env_listekolay
+)
 
 :: 2. Ortamı aktive et
 call env_listekolay\Scripts\activate.bat
 
-:: 3. pip'i güncelle (hata vermemesi için güvenli yöntem)
+:: 3. pip'i güncelle
 python -m pip install --upgrade pip
 
 :: 4. Gerekli kütüphaneleri kur

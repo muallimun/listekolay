@@ -92,6 +92,7 @@ translations = {
         "confirm_delete": "Silme Onayı",
         "information": "Bilgi",
         "file_deleted": "Dosya silindi",
+        "no_update_available_message": "Yeni bir güncelleme mevcut değil.",
         
 
         # Search and filtering
@@ -344,6 +345,7 @@ translations = {
         "confirm_delete": "Confirm Delete",
         "information": "Information",
         "file_deleted": "File deleted",
+        "no_update_available_message": "No update is available.",
 
 
         # Search and filtering
@@ -600,6 +602,7 @@ translations = {
         "confirm_delete": "تأكيد الحذف",
         "information": "معلومات",
         "file_deleted": "تم حذف الملف",
+        "no_update_available_message": "لا يوجد تحديث متاح.",
         
 
         # Search and filtering
@@ -856,6 +859,7 @@ translations = {
         "confirm_delete": "Löschen bestätigen",
         "information": "Information",
         "file_deleted": "Datei gelöscht",
+        "no_update_available_message": "Kein Update verfügbar.",
 
         # Search and filtering
         "search_files": "Dateien suchen...",
@@ -1105,6 +1109,7 @@ translations = {
         "confirm_delete": "Confirmer la suppression",
         "information": "Information",
         "file_deleted": "Fichier supprimé",
+        "no_update_available_message": "Aucune mise à jour disponible.",
 
         # Search and filtering
         "search_files": "Rechercher des fichiers...",
@@ -1360,6 +1365,7 @@ translations = {
         "confirm_delete": "Подтвердить удаление",
         "information": "Информация",
         "file_deleted": "Файл удалён",
+        "no_update_available_message": "Обновлений нет.",
 
         # Search and filtering
         "search_files": "Поиск файлов...",
@@ -1613,6 +1619,7 @@ translations = {
         "confirm_delete": "Confirmar eliminación",
         "information": "Información",
         "file_deleted": "Archivo eliminado",
+        "no_update_available_message": "No hay actualizaciones disponibles.",
 
         # Search and filtering
         "search_files": "Buscar archivos...",
@@ -1867,6 +1874,7 @@ translations = {
         "confirm_delete": "Conferma eliminazione",
         "information": "Informazioni",
         "file_deleted": "File cancellato",
+        "no_update_available_message": "Nessun aggiornamento disponibile.",
 
         # Search and filtering
         "search_files": "Cerca file...",
@@ -2122,6 +2130,7 @@ translations = {
         "confirm_delete": "تأیید حذف",
         "information": "اطلاعات",
         "file_deleted": "فایل حذف شد",
+        "no_update_available_message": "به‌روزرسانی جدیدی در دسترس نیست.",
 
         # Search and filtering
         "search_files": "جستجوی فایل‌ها...",
@@ -2375,6 +2384,7 @@ translations = {
         "confirm_delete": "确认删除",
         "information": "信息",
         "file_deleted": "文件已删除",
+        "no_update_available_message": "没有可用的更新。",
 
         # Search and filtering
         "search_files": "搜索文件...",
@@ -2630,6 +2640,7 @@ translations = {
         "confirm_delete": "削除を確認",
         "information": "情報",
         "file_deleted": "ファイルが削除されました",
+        "no_update_available_message": "利用可能なアップデートはありません。",
 
 
         # Search and filtering
@@ -2883,6 +2894,7 @@ translations = {
         "confirm_delete": "حذف کی تصدیق کریں",
         "information": "معلومات",
         "file_deleted": "فائل حذف ہوگئی",
+        "no_update_available_message": "کوئی تازہ کاری دستیاب نہیں ہے۔",
         
 
         # Search and filtering
@@ -3135,6 +3147,7 @@ translations = {
         "confirm_delete": "हटाने की पुष्टि करें",
         "information": "सूचना",
         "file_deleted": "फ़ाइल हटाई गई",
+        "no_update_available_message": "कोई अपडेट उपलब्ध नहीं है।",
 
         # Search and filtering
         "search_files": "फ़ाइलें खोजें...",
