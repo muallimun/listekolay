@@ -119,5 +119,6 @@ python listekolay.py
 
 ## 👤 Author / Geliştirici
 
-Developed by [Muallimun](https://github.com/muallimun) ❤️  
-Hazırlayan: [Muallimun](https://github.com/muallimun) ❤️
+Developed by [Abdullah TAT](https://github.com/muallimun) ❤️  
+Hazırlayan: [Abdullah TAT](https://github.com/muallimun) ❤️
+
